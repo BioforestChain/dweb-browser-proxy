@@ -23,6 +23,8 @@ type (
 	sUser struct{}
 )
 
+var serverFileIniPath = "/var/opt/"
+
 func init() {
 	service.RegisterUser(New())
 }
@@ -121,10 +123,22 @@ func (s *sUser) GenerateFrpCVisitorIni(visitorConfig FrpCVisitor) error {
 	_, filename, _, _ := runtime.Caller(0)
 	rootPath := path.Dir(path.Dir(path.Dir(path.Dir(filename))))
 	nowTimestamp := strconv.Itoa(int(time.Now().Unix()))
-	outPath := rootPath + "/resource/out/" + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
+	visitorDir := rootPath + "/resource/out/visitor/"
+	visitorDirSer := serverFileIniPath + "/visitor/"
+	e := os.MkdirAll(visitorDir, 0644)
+	_ := os.MkdirAll(visitorDirSer, 0644)
+	if e != nil {
+		return e
+	}
+	outPath := visitorDir + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
+	outPathSer := visitorDirSer + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
 	err := RenderIni(rootPath+"/resource/template/frpc_visitor_template.ini", outPath, visitorConfig)
+	errSer := RenderIni(rootPath+"/resource/template/frpc_visitor_template.ini", outPathSer, visitorConfig)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if errSer != nil {
+		log.Fatal(errSer)
 	}
 	return nil
 }
@@ -133,10 +147,25 @@ func (s *sUser) GenerateFrpCIntervieweeIni(config FrpCInterviewee) error {
 	_, filename, _, _ := runtime.Caller(0)
 	rootPath := path.Dir(path.Dir(path.Dir(path.Dir(filename))))
 	nowTimestamp := strconv.Itoa(int(time.Now().Unix()))
-	outPath := rootPath + "/resource/out/" + nowTimestamp + "_" + config.IntervieweeName + "_interviewee" + ".ini"
+	intervieweeDir := rootPath + "/resource/out/interviewee/"
+	intervieweeDirSer := serverFileIniPath + "/interviewee/"
+	e := os.MkdirAll(intervieweeDir, 0644)
+	eSer := os.MkdirAll(intervieweeDirSer, 0644)
+	if e != nil {
+		return e
+	}
+	if eSer != nil {
+		return eSer
+	}
+	outPath := intervieweeDir + nowTimestamp + "_" + config.IntervieweeName + "_interviewee" + ".ini"
+	outPathSer := intervieweeDirSer + nowTimestamp + "_" + config.IntervieweeName + "_interviewee" + ".ini"
 	err := RenderIni(rootPath+"/resource/template/frpc_interviewee_template.ini", outPath, config)
+	errSer := RenderIni(rootPath+"/resource/template/frpc_interviewee_template.ini", outPathSer, config)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if errSer != nil {
+		log.Fatal(errSer)
 	}
 	return nil
 }
