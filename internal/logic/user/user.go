@@ -126,9 +126,12 @@ func (s *sUser) GenerateFrpCVisitorIni(visitorConfig FrpCVisitor) error {
 	visitorDir := rootPath + "/resource/out/visitor/"
 	visitorDirSer := serverFileIniPath + "/visitor/"
 	e := os.MkdirAll(visitorDir, 0644)
-	_ := os.MkdirAll(visitorDirSer, 0644)
+	eSer := os.MkdirAll(visitorDirSer, 0644)
 	if e != nil {
 		return e
+	}
+	if eSer != nil {
+		return eSer
 	}
 	outPath := visitorDir + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
 	outPathSer := visitorDirSer + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
