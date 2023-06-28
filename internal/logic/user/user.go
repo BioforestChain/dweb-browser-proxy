@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"fmt"
 	"frpConfManagement/internal/dao"
 	"frpConfManagement/internal/model"
 	"frpConfManagement/internal/model/do"
@@ -24,13 +23,13 @@ type (
 )
 
 var serverFileIniPath = "/var/opt/"
+var serverPort = "10000"
 
 func init() {
 	service.RegisterUser(New())
 }
 
 func New() service.IUser {
-	fmt.Println("in ===IUser")
 	return &sUser{}
 }
 
@@ -68,6 +67,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 			Timestamp:      nowTimestamp,
 			Remark:         in.Remark,
 		}).Insert()
+
 		visitorConfig := FrpCVisitor{md5Identification + "_visitor", "visitor", md5Identification, "127.0.0.1", 19999}
 		intervieweeConfig := FrpCInterviewee{md5Identification, "127.0.0.1", 19999}
 		s.GenerateFrpCVisitorIni(visitorConfig)
