@@ -66,7 +66,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 		return err
 	})
 }
-func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.ProxyServerUser, total int, err error) {
+func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.ProxyServerUser, total int, err error) {
 	condition := g.Map{
 		"domain like ?": "%" + in.Domain + "%",
 	}
@@ -75,7 +75,6 @@ func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (out [
 	if err != nil {
 		return nil, 0, err
 	}
-	var entities []*do.ProxyServerUser
 	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
 		return nil, 0, err
 	}
