@@ -7,12 +7,14 @@ package service
 
 import (
 	"context"
-	"frpConfManagement/internal/model"
+	"proxyServer/internal/model"
+	"proxyServer/internal/model/do"
 )
 
 type (
 	IUser interface {
 		Create(ctx context.Context, in model.UserCreateInput) (err error)
+		GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.ProxyServerUser,total int,err error)
 		GenerateMD5ByIdentification(identification string) (string, error)
 		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)

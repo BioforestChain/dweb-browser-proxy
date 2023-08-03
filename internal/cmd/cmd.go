@@ -2,16 +2,16 @@ package cmd
 
 import (
 	"context"
-	"frpConfManagement/internal/consts"
+	"proxyServer/internal/consts"
 	"github.com/gogf/gf/v2/net/goai"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 
-	"frpConfManagement/internal/controller/hello"
+	"proxyServer/internal/controller/hello"
 
-	"frpConfManagement/internal/controller/user"
+	"proxyServer/internal/controller/user"
 )
 
 var (

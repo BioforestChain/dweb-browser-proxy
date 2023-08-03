@@ -11,17 +11,18 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// FrpcUserDao is the data access object for table frpc_user.
-type FrpcUserDao struct {
+// ProxyServerUserDao is the data access object for table user.
+type ProxyServerUserDao struct {
 	table   string          // table is the underlying table name of the DAO.
 	group   string          // group is the database configuration group name of current DAO.
-	columns FrpcUserColumns // columns contains all the column names of Table for convenient usage.
+	columns ProxyServerUserColumns // columns contains all the column names of Table for convenient usage.
 }
 
-// FrpcUserColumns defines and stores column names for table frpc_user.
-type FrpcUserColumns struct {
+// ProxyServerUserColumns defines and stores column names for table user.
+type ProxyServerUserColumns struct {
 	Id             string //
 	Name           string // 用户名
+	Domain         string // 域名
 	Identification string // 设备标识
 	Remark         string // 备注信息
 	CreatedAt      string // Created Time
@@ -29,10 +30,11 @@ type FrpcUserColumns struct {
 	DeletedAt      string // Deleted Time
 }
 
-// frpcUserColumns holds the columns for table frpc_user.
-var frpcUserColumns = FrpcUserColumns{
+// proxyServerUserColumns holds the columns for table user.
+var proxyServerUserColumns = ProxyServerUserColumns{
 	Id:             "id",
 	Name:           "name",
+	Domain:         "domain", // 域名
 	Identification: "identification",
 	Remark:         "remark",
 	CreatedAt:      "created_at",
@@ -40,37 +42,37 @@ var frpcUserColumns = FrpcUserColumns{
 	DeletedAt:      "deleted_at",
 }
 
-// NewFrpcUserDao creates and returns a new DAO object for table data access.
-func NewFrpcUserDao() *FrpcUserDao {
-	return &FrpcUserDao{
+// NewProxyServerUserDao creates and returns a new DAO object for table data access.
+func NewProxyServerUserDao() *ProxyServerUserDao {
+	return &ProxyServerUserDao{
 		group:   "default",
-		table:   "frpc_user",
-		columns: frpcUserColumns,
+		table:   "user",
+		columns: proxyServerUserColumns,
 	}
 }
 
 // DB retrieves and returns the underlying raw database management object of current DAO.
-func (dao *FrpcUserDao) DB() gdb.DB {
+func (dao *ProxyServerUserDao) DB() gdb.DB {
 	return g.DB(dao.group)
 }
 
 // Table returns the table name of current dao.
-func (dao *FrpcUserDao) Table() string {
+func (dao *ProxyServerUserDao) Table() string {
 	return dao.table
 }
 
 // Columns returns all column names of current dao.
-func (dao *FrpcUserDao) Columns() FrpcUserColumns {
+func (dao *ProxyServerUserDao) Columns() ProxyServerUserColumns {
 	return dao.columns
 }
 
 // Group returns the configuration group name of database of current dao.
-func (dao *FrpcUserDao) Group() string {
+func (dao *ProxyServerUserDao) Group() string {
 	return dao.group
 }
 
 // Ctx creates and returns the Model for current DAO, It automatically sets the context for current operation.
-func (dao *FrpcUserDao) Ctx(ctx context.Context) *gdb.Model {
+func (dao *ProxyServerUserDao) Ctx(ctx context.Context) *gdb.Model {
 	return dao.DB().Model(dao.table).Safe().Ctx(ctx)
 }
 
@@ -80,6 +82,7 @@ func (dao *FrpcUserDao) Ctx(ctx context.Context) *gdb.Model {
 //
 // Note that, you should not Commit or Rollback the transaction in function f
 // as it is automatically handled by this function.
-func (dao *FrpcUserDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
+func (dao *ProxyServerUserDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
 	return dao.Ctx(ctx).Transaction(ctx, f)
 }
+

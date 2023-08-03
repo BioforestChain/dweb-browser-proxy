@@ -1,4 +1,4 @@
-module frpConfManagement
+module proxyServer
 
 go 1.20
 

@@ -11,9 +11,9 @@ package user
 
 import "testing"
 
-func Test_sUser_GenerateFrpCVisitorIni(t *testing.T) {
+func Test_sUser_GenerateProxyServerCVisitorIni(t *testing.T) {
 	type args struct {
-		visitorConfig FrpCVisitor
+		visitorConfig ProxyServerCVisitor
 	}
 	tests := []struct {
 		name    string
@@ -24,7 +24,7 @@ func Test_sUser_GenerateFrpCVisitorIni(t *testing.T) {
 		{
 			"had_set_uid",
 			args{
-				FrpCVisitor{
+				ProxyServerCVisitor{
 					"md5Identification_visitor",
 					"visitor",
 					"md5Identification",
@@ -38,8 +38,8 @@ func Test_sUser_GenerateFrpCVisitorIni(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sUser{}
-			if err := s.GenerateFrpCVisitorIni(tt.args.visitorConfig); (err != nil) != tt.wantErr {
-				t.Errorf("GenerateFrpCVisitorIni() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.GenerateProxyServerCVisitorIni(tt.args.visitorConfig); (err != nil) != tt.wantErr {
+				t.Errorf("GenerateProxyServerCVisitorIni() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

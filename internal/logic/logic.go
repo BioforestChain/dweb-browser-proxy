@@ -5,5 +5,5 @@
 package logic
 
 import (
-	_ "frpConfManagement/internal/logic/user"
+	_ "proxyServer/internal/logic/user"
 )

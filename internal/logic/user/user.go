@@ -2,19 +2,15 @@ package user
 
 import (
 	"context"
-	"frpConfManagement/internal/dao"
-	"frpConfManagement/internal/model"
-	"frpConfManagement/internal/model/do"
-	"frpConfManagement/internal/service"
+	"database/sql"
 	"github.com/gogf/gf/v2/crypto/gmd5"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"log"
-	"os"
-	"path"
-	"runtime"
-	"strconv"
-	"text/template"
+	"github.com/gogf/gf/v2/frame/g"
+	"proxyServer/internal/dao"
+	"proxyServer/internal/model"
+	"proxyServer/internal/model/do"
+	"proxyServer/internal/service"
 	"time"
 )
 
@@ -36,9 +32,7 @@ func New() service.IUser {
 // Create creates user account.
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error) {
 	md5Identification, _ := s.GenerateMD5ByIdentification(in.Identification)
-	var (
-		available bool
-	)
+	var available bool
 	// Identification checks.
 
 	available, err = s.IsIdentificationAvailable(ctx, md5Identification)
@@ -60,20 +54,32 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 		return gerror.Newf(`Name "%s" is already token by others`, in.Name)
 	}
 	nowTimestamp := time.Now().Unix()
-	return dao.FrpcUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		_, err = dao.FrpcUser.Ctx(ctx).Data(do.FrpcUser{
+	return dao.ProxyServerUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		_, err = dao.ProxyServerUser.Ctx(ctx).Data(do.ProxyServerUser{
 			Name:           in.Name,
+			Domain:         in.Domain,
+			PublicKey:      in.PublicKey,
 			Identification: md5Identification,
 			Timestamp:      nowTimestamp,
 			Remark:         in.Remark,
 		}).Insert()
-
-		visitorConfig := FrpCVisitor{md5Identification + "_visitor", "visitor", md5Identification, "127.0.0.1", 19999}
-		intervieweeConfig := FrpCInterviewee{md5Identification, "127.0.0.1", 19999}
-		s.GenerateFrpCVisitorIni(visitorConfig)
-		s.GenerateFrpCIntervieweeIni(intervieweeConfig)
 		return err
 	})
+}
+func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.ProxyServerUser, total int, err error) {
+	condition := g.Map{
+		"domain like ?": "%" + in.Domain + "%",
+	}
+	all, total, err := dao.ProxyServerUser.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
+
+	if err != nil {
+		return nil, 0, err
+	}
+	var entities []*do.ProxyServerUser
+	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
+		return nil, 0, err
+	}
+	return entities, total, err
 }
 
 func (s *sUser) GenerateMD5ByIdentification(identification string) (string, error) {
@@ -85,7 +91,7 @@ func (s *sUser) GenerateMD5ByIdentification(identification string) (string, erro
 }
 
 func (s *sUser) IsIdentificationAvailable(ctx context.Context, identification string) (bool, error) {
-	count, err := dao.FrpcUser.Ctx(ctx).Where(do.FrpcUser{
+	count, err := dao.ProxyServerUser.Ctx(ctx).Where(do.ProxyServerUser{
 		Identification: identification,
 	}).Count()
 	if err != nil {
@@ -96,99 +102,11 @@ func (s *sUser) IsIdentificationAvailable(ctx context.Context, identification st
 
 // IsNameAvailable checks and returns given Name is available for signing up.
 func (s *sUser) IsNameAvailable(ctx context.Context, Name string) (bool, error) {
-	count, err := dao.FrpcUser.Ctx(ctx).Where(do.FrpcUser{
+	count, err := dao.ProxyServerUser.Ctx(ctx).Where(do.ProxyServerUser{
 		Name: Name,
 	}).Count()
 	if err != nil {
 		return false, err
 	}
 	return count == 0, nil
-}
-
-type FrpCVisitor struct {
-	VisitorName string
-	Role        string
-	ServerName  string
-	Host        string
-	Port        int
-}
-
-type FrpCInterviewee struct {
-	IntervieweeName string
-	Host            string
-	Port            int
-}
-
-func (s *sUser) GenerateFrpCVisitorIni(visitorConfig FrpCVisitor) error {
-	_, filename, _, _ := runtime.Caller(0)
-	rootPath := path.Dir(path.Dir(path.Dir(path.Dir(filename))))
-	nowTimestamp := strconv.Itoa(int(time.Now().Unix()))
-	visitorDir := rootPath + "/resource/out/visitor/"
-	visitorDirSer := serverFileIniPath + "/visitor/"
-	e := os.MkdirAll(visitorDir, 0644)
-	eSer := os.MkdirAll(visitorDirSer, 0644)
-	if e != nil {
-		return e
-	}
-	if eSer != nil {
-		return eSer
-	}
-	outPath := visitorDir + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
-	outPathSer := visitorDirSer + nowTimestamp + "_" + visitorConfig.ServerName + "_visitor" + ".ini"
-	err := RenderIni(rootPath+"/resource/template/frpc_visitor_template.ini", outPath, visitorConfig)
-	errSer := RenderIni(rootPath+"/resource/template/frpc_visitor_template.ini", outPathSer, visitorConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if errSer != nil {
-		log.Fatal(errSer)
-	}
-	return nil
-}
-
-func (s *sUser) GenerateFrpCIntervieweeIni(config FrpCInterviewee) error {
-	_, filename, _, _ := runtime.Caller(0)
-	rootPath := path.Dir(path.Dir(path.Dir(path.Dir(filename))))
-	nowTimestamp := strconv.Itoa(int(time.Now().Unix()))
-	intervieweeDir := rootPath + "/resource/out/interviewee/"
-	intervieweeDirSer := serverFileIniPath + "/interviewee/"
-	e := os.MkdirAll(intervieweeDir, 0644)
-	eSer := os.MkdirAll(intervieweeDirSer, 0644)
-	if e != nil {
-		return e
-	}
-	if eSer != nil {
-		return eSer
-	}
-	outPath := intervieweeDir + nowTimestamp + "_" + config.IntervieweeName + "_interviewee" + ".ini"
-	outPathSer := intervieweeDirSer + nowTimestamp + "_" + config.IntervieweeName + "_interviewee" + ".ini"
-	err := RenderIni(rootPath+"/resource/template/frpc_interviewee_template.ini", outPath, config)
-	errSer := RenderIni(rootPath+"/resource/template/frpc_interviewee_template.ini", outPathSer, config)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if errSer != nil {
-		log.Fatal(errSer)
-	}
-	return nil
-}
-
-func RenderIni(filePath string, outputFilePath string, config interface{}) error {
-	t, err := template.ParseFiles(filePath)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(outputFilePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	err = t.Execute(file, config)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

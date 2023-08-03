@@ -9,15 +9,17 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// FrpcUser is the golang structure of table frpc_user for DAO operations like Where/Data.
-type FrpcUser struct {
-	g.Meta         `orm:"table:frpc_user, do:true"`
+// User is the golang structure of table user for DAO operations like Where/Data.
+type User struct {
+	g.Meta         `orm:"table:user, do:true"`
 	Id             interface{} //
 	Name           interface{} // 用户名
+	Domain         interface{} // 域名
 	Identification interface{} // 设备标识
-	Timestamp      interface{} // 时间戳
 	Remark         interface{} // 备注信息
+	Timestamp      interface{} // 时间戳
 	CreatedAt      *gtime.Time // Created Time
 	UpdateAt       *gtime.Time // Updated Time
 	DeletedAt      *gtime.Time // Deleted Time
+	PublicKey      interface{} //
 }

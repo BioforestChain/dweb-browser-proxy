@@ -8,8 +8,8 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// FrpcUser is the golang structure for table frpc_user.
-type FrpcUser struct {
+// ProxyServerUser is the golang structure for table user.
+type ProxyServerUser struct {
 	Id             int         `json:"id"             description:""`
 	Name           string      `json:"name"           description:"用户名"`
 	Identification string      `json:"identification" description:"设备标识"`

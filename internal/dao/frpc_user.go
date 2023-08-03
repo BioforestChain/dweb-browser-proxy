@@ -5,22 +5,22 @@
 package dao
 
 import (
-	"frpConfManagement/internal/dao/internal"
+	"proxyServer/internal/dao/internal"
 )
 
-// internalFrpcUserDao is internal type for wrapping internal DAO implements.
-type internalFrpcUserDao = *internal.FrpcUserDao
+// internalProxyServerUserDao is internal type for wrapping internal DAO implements.
+type internalProxyServerUserDao = *internal.ProxyServerUserDao
 
-// frpcUserDao is the data access object for table frpc_user.
+// ProxyServerUserDao is the data access object for table user.
 // You can define custom methods on it to extend its functionality as you wish.
-type frpcUserDao struct {
-	internalFrpcUserDao
+type ProxyServerUserDao struct {
+	internalProxyServerUserDao
 }
 
 var (
-	// FrpcUser is globally public accessible object for table frpc_user operations.
-	FrpcUser = frpcUserDao{
-		internal.NewFrpcUserDao(),
+	// ProxyServerUser is globally public accessible object for table user operations.
+	ProxyServerUser = ProxyServerUserDao{
+		internal.NewProxyServerUserDao(),
 	}
 )
 
