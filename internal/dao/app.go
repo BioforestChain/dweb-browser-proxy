@@ -8,19 +8,19 @@ import (
 	"proxyServer/internal/dao/internal"
 )
 
-// internalProxyServerUserDao is internal type for wrapping internal DAO implements.
-type internalProxyServerUserDao = *internal.UserDao
+// internalAppDao is internal type for wrapping internal DAO implements.
+type internalAppDao = *internal.AppDao
 
-// ProxyServerUserDao is the data access object for table user.
+// appDao is the data access object for table app.
 // You can define custom methods on it to extend its functionality as you wish.
-type ProxyServerUserDao struct {
-	internalProxyServerUserDao
+type appDao struct {
+	internalAppDao
 }
 
 var (
-	// ProxyServerUser is globally public accessible object for table user operations.
-	ProxyServerUser = ProxyServerUserDao{
-		internal.NewUserDao(),
+	// App is globally public accessible object for table app operations.
+	App = appDao{
+		internal.NewAppDao(),
 	}
 )
 

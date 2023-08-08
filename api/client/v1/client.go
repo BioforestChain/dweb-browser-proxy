@@ -6,34 +6,57 @@ import (
 	"proxyServer/internal/model/do"
 )
 
+// 1. 用户注册
+// 1.1 设备表，一个用户可以有多个设备
 type ClientRegReq struct {
-	g.Meta         `path:"/user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
-	Name           string `v:"required"`        //用户名，昵称？
-	Domain         string `v:"required|domain"` // 域名
-	PublicKey      string `v:"required"`
-	Identification string `v:"required"` // 身份标识
-	Remark         string
+	g.Meta               `path:"/user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
+	Name                 string `v:"required"` //用户名，昵称？
+	PublicKey            string `v:"required"`
+	DeviceIdentification string `v:"required"` // imei码，身份标识
+	Remark               string
 }
+
+// 1.2  域名注册
+type ClientDomainRegReq struct {
+	g.Meta               `path:"/user/client-domain-reg" tags:"ClientDomainRegService" method:"post" summary:"A new client with domain"`
+	UserName             string `v:"required"`        //用户名称
+	AppName              string `v:"required"`        //app名称
+	AppIdentification    string `v:"required"`        //app唯一标识
+	DeviceIdentification string `v:"required"`        //设备唯一标识
+	Domain               string `v:"required|domain"` // 域名
+	//Identification string `v:"required"`        // 通过用户名，查到user_id，数据插入到app表里
+	Remark string
+}
+
 type ClientRegRes struct {
 }
 
 type ClientQueryReq struct {
-	g.Meta         `path:"/user/client-query" tags:"ClientQueryService" method:"get" summary:"Query client"`
+	g.Meta               `path:"/user/client-query" tags:"ClientQueryService" method:"get" summary:"Query client"`
+	UserName             string `v:"required"` //用户名称
+	AppName              string `v:"required"` //app名称
+	AppIdentification    string `v:"required"` //app唯一标识
+	DeviceIdentification string
+}
+
+type ClientListQueryReq struct {
+	g.Meta         `path:"/user/client-list" tags:"ClientListQueryService" method:"get" summary:"Query client list"`
 	Domain         string
 	Identification string
 	dao.PaginationSearch
 }
 
 type ClientQueryRes struct {
-	List []*do.ProxyServerUser `json:"list"` // 列表
+	Domain         string `json:"domain"`         // 列表
+	Identification string `json:"identification"` // 列表
 }
 type ClientQueryListRes struct {
-	List []*do.ProxyServerUser `json:"list"` // 列表
+	List []*do.User `json:"list"` // 列表
 	//Stats map[string]int        `json:"stats"` // 搜索统计
 	Page int `json:"page"` // 分页码
 	//Size     int `json:"size"`     // 分页数量
-	Total    int `json:"total"`    // 数据总数
-	LastPage int `json:"lastPage"` // 最后一页
+	Total    int `json:"total"`     // 数据总数
+	LastPage int `json:"last_page"` // 最后一页
 }
 
 //type ContentSearchOutput struct {

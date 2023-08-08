@@ -7,6 +7,7 @@ package service
 
 import (
 	"context"
+	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
 )
@@ -14,8 +15,10 @@ import (
 type (
 	IUser interface {
 		Create(ctx context.Context, in model.UserCreateInput) (err error)
-		GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.ProxyServerUser,total int,err error)
-		GenerateMD5ByIdentification(identification string) (string, error)
+		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
+		GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.User,total int,err error)
+		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (out *v1.ClientQueryRes,err error)
+		GenerateMD5ByDeviceIdentification(identification string) (string, error)
 		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)
 	}

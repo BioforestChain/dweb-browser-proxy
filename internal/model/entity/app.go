@@ -8,14 +8,15 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// User is the golang structure for table user.
-type User struct {
-	Id        int64       `json:"id"        description:""`
-	Name      string      `json:"name"      description:"用户名"`
+// App is the golang structure for table app.
+type App struct {
+	Id        int         `json:"id"        description:""`
+	UserId    int64       `json:"userId"    description:"用户id"`
+	Name      string      `json:"name"      description:"名称"`
+	Domain    string      `json:"domain"    description:"域名"`
 	Remark    string      `json:"remark"    description:"备注信息"`
-	Timestamp int         `json:"timestamp" description:"时间戳"`
+	Timestamp string      `json:"timestamp" description:"时间戳"`
 	CreatedAt *gtime.Time `json:"createdAt" description:"Created Time"`
 	UpdateAt  *gtime.Time `json:"updateAt"  description:"Updated Time"`
 	DeletedAt *gtime.Time `json:"deletedAt" description:"Deleted Time"`
-	PublicKey string      `json:"publicKey" description:""`
 }

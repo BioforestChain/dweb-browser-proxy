@@ -11,15 +11,14 @@ import (
 
 // User is the golang structure of table user for DAO operations like Where/Data.
 type User struct {
-	g.Meta         `orm:"table:user, do:true"`
-	Id             interface{} //
-	Name           interface{} // 用户名
-	Domain         interface{} // 域名
-	Identification interface{} // 设备标识
-	Remark         interface{} // 备注信息
-	Timestamp      interface{} // 时间戳
-	CreatedAt      *gtime.Time // Created Time
-	UpdateAt       *gtime.Time // Updated Time
-	DeletedAt      *gtime.Time // Deleted Time
-	PublicKey      interface{} //
+	g.Meta    `orm:"table:user, do:true"`
+	Id             interface{} `gorm:"column:id" db:"id" json:"id" form:"id"` // 用户id
+	Name           interface{} `gorm:"column:name" db:"name" json:"name" form:"name"` // 用户名
+
+	PublicKey      interface{} `gorm:"column:public_key" db:"public_key" json:"public_key" form:"public_key"` // 公钥
+	Timestamp      interface{} `gorm:"column:timestamp" db:"timestamp" json:"timestamp" form:"timestamp"` // 时间戳
+	Remark         interface{} `gorm:"column:remark" db:"remark" json:"remark" form:"remark"` // 备注信息
+	CreatedAt      *gtime.Time `gorm:"column:created_at" db:"created_at" json:"created_at" form:"created_at"` // Created Time
+	UpdateAt       *gtime.Time `gorm:"column:update_at" db:"update_at" json:"update_at" form:"update_at"` // Updated Time
+	DeletedAt      *gtime.Time `gorm:"column:deleted_at" db:"deleted_at" json:"deleted_at" form:"deleted_at"` // Deleted Time
 }
