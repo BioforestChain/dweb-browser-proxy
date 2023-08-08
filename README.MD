@@ -1,4 +1,7 @@
-# GoFrame Template For SingleRepo
+# dweb-browser-proxy
 
-Quick Start: 
-- https://goframe.org/pages/viewpage.action?pageId=1114399
+This service provides the following
+- It is the agent service, 
+- Processing data flow, 
+- Forwarding data flow,
+- To provide convenient services for data forwarding efficiency
