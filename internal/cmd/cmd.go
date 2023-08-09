@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"context"
-	"proxyServer/internal/consts"
-	"github.com/gogf/gf/v2/net/goai"
-
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/net/goai"
 	"github.com/gogf/gf/v2/os/gcmd"
+	"proxyServer/api/ws"
+	"proxyServer/internal/consts"
+	cipc "proxyServer/internal/controller/ipc"
 
 	"proxyServer/internal/controller/hello"
 
@@ -26,7 +27,15 @@ var (
 				group.Bind(
 					hello.New(),
 					user.New(),
+					cipc.New(),
+					//ws.New(),
+
 				)
+				var hub *ws.Hub
+				s.BindHandler("/ws", func(r *ghttp.Request) {
+					ws.ServeWs(hub, r.Response.Writer, r.Request)
+				})
+
 				// Special handler that needs authentication.
 				//group.Group("/", func(group *ghttp.RouterGroup) {
 				//	group.Middleware(service.Middleware().Auth)
@@ -34,6 +43,21 @@ var (
 				//		"/user/profile": user.New().Profile,
 				//	})
 				//})
+
+				//group.Group("/user", func(group *ghttp.RouterGroup) {
+				//	group.GET("/client-list", func(r *ghttp.Request) {
+				//
+				//		r.Response.Write("info")
+				//
+				//	})
+				//	group.POST("/edit", func(r *ghttp.Request) {
+				//		r.Response.Write("edit")
+				//	})
+				//	group.DELETE("/drop", func(r *ghttp.Request) {
+				//		r.Response.Write("drop")
+				//	})
+				//})
+
 			})
 			enhanceOpenAPIDoc(s)
 			s.Run()

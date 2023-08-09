@@ -3,7 +3,7 @@ package ipc
 import (
 	"bytes"
 	"encoding/json"
-	"ipc/helper"
+	"proxyServer/ipc/helper"
 	"testing"
 )
 

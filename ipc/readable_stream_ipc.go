@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"ipc/helper"
 	"log"
+	"proxyServer/ipc/helper"
 )
 
 type ReadableStreamIPC struct {

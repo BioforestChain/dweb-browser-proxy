@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
-	"ipc"
 	"log"
 	"net/url"
+	"proxyServer/ipc"
 )
 
 func main() {
-	url := "ws://127.0.0.1:8080/ws"
+	url := "ws://127.0.0.1:8000/ws"
 	conn, res, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		log.Fatalln("Error connecting to server: ", err)

@@ -3,7 +3,7 @@ package ipc
 import (
 	"crypto/rand"
 	"encoding/json"
-	"ipc/helper"
+	"proxyServer/ipc/helper"
 )
 
 type MetaBody struct {

@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"io"
 	"ipc"
-	"ipc/helper"
 	"log"
 	"net"
+	"proxyServer/ipc/helper"
 )
 
 func main() {
