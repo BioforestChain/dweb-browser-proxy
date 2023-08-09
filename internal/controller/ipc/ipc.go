@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gogf/gf/v2/frame/g"
 	"log"
 	"proxyServer/ipc"
 
@@ -22,21 +23,17 @@ type Controller struct {
 	hub *ws.Hub
 }
 
-func New() *Controller {
-
-	ctrl := &Controller{
-		hub: ws.NewHub(),
-	}
-
-	go ctrl.hub.Run()
-
-	return ctrl
+func New(hub *ws.Hub) *Controller {
+	return &Controller{hub: hub}
 }
 
 func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
+	res = &v1.IpcTestRes{}
+
 	client := a.hub.GetClient("test")
 	if client == nil {
 		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, "The service is unavailable")
+		g.RequestFromCtx(ctx).Response.Writeln(res)
 		return
 	}
 
@@ -49,7 +46,7 @@ func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcT
 	if err != nil {
 		log.Println("ipc response err: ", err)
 		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-
+		g.RequestFromCtx(ctx).Response.Writeln(res)
 		return
 	}
 	//for k, v := range res.Header {
@@ -59,12 +56,12 @@ func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcT
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {
 		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-
+		g.RequestFromCtx(ctx).Response.Writeln(res)
 		return
 	}
 
 	res.Msg = fmt.Sprintf(`{"msg": %s}`, string(resStr))
-
+	g.RequestFromCtx(ctx).Response.Writeln(res)
 	return
 
 }

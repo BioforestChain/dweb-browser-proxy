@@ -22,16 +22,20 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
+			s.SetPort(8000)
 			s.Group("/", func(group *ghttp.RouterGroup) {
+
+				hub := ws.NewHub()
+
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				group.Bind(
 					hello.New(),
 					user.New(),
-					cipc.New(),
+					cipc.New(hub),
 					//ws.New(),
-
 				)
-				var hub *ws.Hub
+
+				go hub.Run()
 				s.BindHandler("/ws", func(r *ghttp.Request) {
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})

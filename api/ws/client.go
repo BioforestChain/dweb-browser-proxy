@@ -1,8 +1,6 @@
 package ws
 
 import (
-	"context"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -146,9 +144,6 @@ func (c *Client) Close() {
 
 // ServeWs handles websocket requests from the peer.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	var ctx context.Context
-	g.RequestFromCtx(ctx).Response.Writeln("Hello World!")
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
