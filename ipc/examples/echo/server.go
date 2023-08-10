@@ -81,14 +81,14 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 
 	go func() {
 		defer ipcConn.Close()
-		// 读取proxyStream数据并emit消息（接收消息并处理，然后把结果发送至内部流）
+		// 读取proxyStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
 		if err := serverIPC.BindIncomeStream(proxyStream); err != nil {
 			panic(err)
 		}
 	}()
 
 	go func() {
-		// 读取内部流数据，然后response
+		// 读取输出流数据，然后response
 		serverIPC.ReadFromStream(func(data []byte) {
 			if _, err := ipcConn.conn.Write(data); err != nil {
 				panic(err)

@@ -13,12 +13,12 @@ var ErrReqTimeout = errors.New("req timeout")
 type IPC interface {
 	Request(url string, init RequestArgs) *Request
 	Send(req *Request) (*Response, error)
-	PostMessage(msg interface{}) error // msg 入队内部流
+	PostMessage(msg interface{}) error // msg 入队输出流
 	GetUID() uint64
 	GetSupportBinary() bool
 	OnClose(observer Observer)
 	Close()
-	GetStreamRead() <-chan []byte // 获取内部流的channel
+	GetStreamRead() <-chan []byte // 获取输出流的channel
 }
 
 type BaseIPC struct {
@@ -34,9 +34,9 @@ type BaseIPC struct {
 	reqResMap       map[uint64]chan<- *Response
 	mutex           sync.Mutex
 	reqTimeout      time.Duration
-	postMessage     func(msg interface{}) error // msg 入队ipc内部流
-	doClose         func()                      // proxy stream被关闭时，需要close内部流
-	getStreamRead   func() <-chan []byte        // 获取ipc内部流read
+	postMessage     func(msg interface{}) error // msg 入队ipc输出流
+	doClose         func()                      // proxy stream被关闭时，需要close输出流
+	getStreamRead   func() <-chan []byte        // 获取ipc输出流read
 }
 
 var UID uint64

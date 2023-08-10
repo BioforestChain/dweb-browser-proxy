@@ -14,8 +14,8 @@ type ReadableStreamIPC struct {
 	*BaseIPC
 	role            ROLE
 	supportProtocol SupportProtocol
-	stream          *ReadableStream // 内部流 TODO 需要考虑并发使用问题
-	proxyStream     *ReadableStream // 代理流
+	stream          *ReadableStream // 输出流 TODO 需要考虑并发使用问题
+	proxyStream     *ReadableStream // 输入流
 }
 
 func NewReadableStreamIPC(role ROLE, proto SupportProtocol) *ReadableStreamIPC {
@@ -74,7 +74,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 		rsi.msgSignal.Emit(msg, rsi)
 	}
 
-	// 代理流关闭后，内部流也要一起关闭
+	// 输入流关闭后，输出流也要一起关闭
 	rsi.Close()
 
 	return nil
@@ -109,14 +109,14 @@ func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
 	return
 }
 
-// ReadFromStream 从内部流读取数据
+// ReadFromStream 从输出流读取数据
 func (rsi *ReadableStreamIPC) ReadFromStream(cb func([]byte)) {
 	for data := range rsi.stream.GetReader().Read() {
 		cb(data)
 	}
 }
 
-// getStreamRead 获取内部流channel
+// getStreamRead 获取输出流channel
 func (rsi *ReadableStreamIPC) getStreamRead() <-chan []byte {
 	return rsi.stream.GetReader().Read()
 }

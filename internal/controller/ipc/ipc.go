@@ -28,6 +28,8 @@ func New(hub *ws.Hub) *Controller {
 }
 
 func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
+	// AUTH
+
 	res = &v1.IpcTestRes{}
 
 	client := a.hub.GetClient("test")
@@ -49,7 +51,7 @@ func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcT
 		g.RequestFromCtx(ctx).Response.Writeln(res)
 		return
 	}
-	//for k, v := range res.Header {
+	//for k, v := range resIpc.Header {
 	//	w.Header().Set(k, v)
 	//}
 
