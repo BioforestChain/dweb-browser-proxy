@@ -6,9 +6,9 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"ipc"
 	"log"
 	"net"
+	"proxyServer/ipc"
 	"proxyServer/ipc/helper"
 )
 

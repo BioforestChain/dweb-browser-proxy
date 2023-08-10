@@ -4,9 +4,9 @@
 package main
 
 import (
-	"ipc"
 	"log"
 	"net"
+	"proxyServer/ipc"
 )
 
 func main() {
