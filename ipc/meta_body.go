@@ -62,16 +62,9 @@ func (m *MetaBody) MarshalJSON() ([]byte, error) {
 		return json.Marshal((*MetaBodyAlias)(metaBody))
 	}
 
-	mb := struct {
-		Type        MetaBodyType `json:"type"`
-		SenderUID   uint64       `json:"sender_uid"`
-		ReceiverUID uint64       `json:"receiver_uid"`
-		Data        []byte       `json:"data"` // 注：json.Marshal时会把slice编码成base64
-		StreamID    string       `json:"stream_id"`
-		MetaID      string       `json:"meta_id"`
-	}{m.Type, m.SenderUID, m.ReceiverUID, m.Data, m.StreamID, m.MetaID}
+	type MetaBodyAlias MetaBody
 
-	return json.Marshal(mb)
+	return json.Marshal((*MetaBodyAlias)(m))
 }
 
 type MetaBodyOption func(mb *MetaBody)

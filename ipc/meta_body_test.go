@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 )
 
@@ -38,11 +39,6 @@ func TestFromMetaBodyBinary(t *testing.T) {
 			t.Fatal("FromMetaBodyBinary failed")
 		}
 
-		//dataCp, err := helper.SimpleDecoder(string(mb.Data), "base64")
-		//if err != nil {
-		//	t.Fatal("FromMetaBodyBinary failed")
-		//}
-
 		if !bytes.Equal(data, mb.Data) {
 			t.Fatal("FromMetaBodyBinary failed")
 		}
@@ -62,4 +58,33 @@ func assertTypeEncoding(t *testing.T, v MetaBodyType, wanted DataEncoding) {
 	if got != wanted {
 		t.Fatal("MetaBody typeEncoding failed")
 	}
+}
+
+func TestMetaBody_MarshalJSON(t *testing.T) {
+	t.Run("", func(t *testing.T) {
+		m := NewMetaBody(1, []byte("hi"), WithMetaBodyType(INLINE_TEXT))
+		mb, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal("metaBody marshal failed")
+			return
+		}
+
+		if !bytes.Contains(mb, []byte(`"type":3`)) {
+			t.Fatal("metaBody marshal failed")
+		}
+	})
+
+	t.Run("", func(t *testing.T) {
+		m := NewMetaBody(1, []byte("hi"), WithMetaBodyType(INLINE_BINARY))
+		mb, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal("metaBody marshal failed")
+			return
+		}
+
+		if !bytes.Contains(mb, []byte(`"type":5`)) {
+			t.Fatal("metaBody marshal failed")
+		}
+	})
+
 }

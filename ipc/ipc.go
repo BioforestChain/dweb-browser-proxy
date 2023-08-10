@@ -18,7 +18,7 @@ type IPC interface {
 	GetSupportBinary() bool
 	OnClose(observer Observer)
 	Close()
-	GetStreamRead() <-chan []byte
+	GetStreamRead() <-chan []byte // 获取内部流的channel
 }
 
 type BaseIPC struct {
