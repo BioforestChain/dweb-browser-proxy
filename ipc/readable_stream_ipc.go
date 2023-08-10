@@ -102,9 +102,8 @@ func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
 		}
 	}
 
-	msgLen := uint32(len(msgData))
 	// 使用littleEndian存储msgLen
-	chunk := helper.U32To8Concat(msgLen, msgData)
+	chunk := helper.U32To8Concat(len(msgData), msgData)
 	rsi.stream.Controller.Enqueue(chunk)
 	return
 }
@@ -128,7 +127,7 @@ func (rsi *ReadableStreamIPC) doClose() {
 
 func (rsi *ReadableStreamIPC) encode(msg string) []byte {
 	// TODO 这里msg要根据数据传输协议encode
-	return helper.U32To8Concat(uint32(len(msg)), []byte(msg))
+	return helper.U32To8Concat(len(msg), []byte(msg))
 }
 
 // SupportProtocol 默认json？

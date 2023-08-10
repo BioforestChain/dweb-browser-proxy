@@ -90,7 +90,7 @@ func TestReadableStreamIPC_BindIncomeStream(t *testing.T) {
 			}
 		}()
 
-		dataEncoding := helper.U32To8Concat(uint32(len(data)), data)
+		dataEncoding := helper.U32To8Concat(len(data), data)
 		proxyStream.Controller.Enqueue(dataEncoding)
 
 		<-ch
@@ -145,7 +145,7 @@ func Test_readIncomeStream(t *testing.T) {
 			}
 		}()
 
-		dataEncoding := helper.U32To8Concat(uint32(len(raw)), raw)
+		dataEncoding := helper.U32To8Concat(len(raw), raw)
 		proxyStream.Controller.Enqueue(dataEncoding)
 		// then close stream
 		proxyStream.Controller.Close()

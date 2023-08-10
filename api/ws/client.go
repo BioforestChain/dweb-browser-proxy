@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"proxyServer/ipc"
+	"sync"
 	"time"
 )
 
@@ -47,6 +48,10 @@ type Client struct {
 	ipc ipc.IPC
 
 	proxyStream *ipc.ReadableStream
+
+	closed bool
+
+	mutex sync.Mutex
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -137,6 +142,14 @@ func (c *Client) GetIpc() ipc.IPC {
 }
 
 func (c *Client) Close() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	
+	if c.closed {
+		return
+	}
+	c.closed = true
+
 	c.ipc.Close()
 	c.proxyStream.Controller.Close()
 	_ = c.conn.Close()

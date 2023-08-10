@@ -53,5 +53,5 @@ func request() []byte {
 		panic(err)
 	}
 
-	return helper.U32To8Concat(uint32(len(reqMarshal)), reqMarshal)
+	return helper.U32To8Concat(len(reqMarshal), reqMarshal)
 }
