@@ -3,8 +3,6 @@ package ipc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
 	"log"
 	"proxyServer/ipc"
 
@@ -28,18 +26,17 @@ func New(hub *ws.Hub) *Controller {
 }
 
 func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
-	// AUTH
-
 	res = &v1.IpcTestRes{}
 
 	client := a.hub.GetClient("test")
 	if client == nil {
-		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, "The service is unavailable")
-		g.RequestFromCtx(ctx).Response.Writeln(res)
-		return
+		res.Ipc = "The service is unavailable"
+		return res, nil
 	}
 
 	clientIpc := client.GetIpc()
+	//url: http://127.0.0.1:8000/user/client-reg
+	//
 	reqIpc := clientIpc.Request("https://www.example.com/search?p=feng", ipc.RequestArgs{
 		Method: "GET",
 		Header: map[string]string{"Content-Type": "application/json"},
@@ -47,25 +44,23 @@ func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcT
 	resIpc, err := clientIpc.Send(reqIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
-		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		g.RequestFromCtx(ctx).Response.Writeln(res)
-		return
+		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
+		res.Ipc = err.Error()
+		return res, err
 	}
+	//todo
 	//for k, v := range resIpc.Header {
 	//	w.Header().Set(k, v)
 	//}
 
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {
-		res.Msg = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		g.RequestFromCtx(ctx).Response.Writeln(res)
-		return
+		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
+		res.Ipc = err.Error()
+		return res, err
 	}
-
-	res.Msg = fmt.Sprintf(`{"msg": %s}`, string(resStr))
-	g.RequestFromCtx(ctx).Response.Writeln(res)
-	return
-
+	res.Ipc = string(resStr)
+	return res, err
 }
 
 //http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

@@ -1,18 +1,12 @@
 package v1
 
-import "github.com/gogf/gf/v2/frame/g"
-
 type IpcTestReq struct {
-	g.Meta `path:"/ipc/test" tags:"IpcTestService" method:"get" summary:"test a new ipc"`
-	//Name                 string `v:"required"` //用户名，昵称？
-	//PublicKey            string `v:"required"`
-	//DeviceIdentification string `v:"required"` // imei码，身份标识
+	//g.Meta `path:"/ipc/test" tags:"IpcTestService" method:"get" summary:"test a new ipc"`
+	Header string `v:"required"` //
+	Method string `v:"required"`
+	URL    string `v:"required"` //
 	//Remark               string
 }
 type IpcTestRes struct {
-	Msg string
-	//Name                 string `v:"required"` //用户名，昵称？
-	//PublicKey            string `v:"required"`
-	//DeviceIdentification string `v:"required"` // imei码，身份标识
-	//Remark               string
+	Ipc string `json:"ipc"`
 }
