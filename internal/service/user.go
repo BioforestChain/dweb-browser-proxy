@@ -17,6 +17,7 @@ type (
 		Create(ctx context.Context, in model.UserCreateInput) (err error)
 		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
 		GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.User,total int,err error)
+		IsDomainExist(ctx context.Context, in model.CheckUrlInput) (bool)
 		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (out *v1.ClientQueryRes,err error)
 		GenerateMD5ByDeviceIdentification(identification string) (string, error)
 		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)

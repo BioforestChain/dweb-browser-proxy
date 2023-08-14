@@ -5,6 +5,7 @@ type IpcTestReq struct {
 	Header string `v:"required"` //
 	Method string `v:"required"`
 	URL    string `v:"required"` //
+	Host   string //
 	//Remark               string
 }
 type IpcTestRes struct {

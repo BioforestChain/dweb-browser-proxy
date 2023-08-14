@@ -42,3 +42,7 @@ type AppQueryInput struct {
 	AppIdentification    string
 	DeviceIdentification string
 }
+
+type CheckUrlInput struct {
+	Host string
+}

@@ -53,7 +53,8 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 		url, _ := url.ParseRequestURI(request.URL)
 
-		if (url.Host + url.Path) == "www.example.com/search" {
+		//if (url.Host + url.Path) == "www.example.com/search" {
+		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/tests" {
 			bodyReceiver := request.Body.(*ipc.BodyReceiver)
 			body := bodyReceiver.GetMetaBody().Data
 			log.Println("onRequest: ", request.URL, string(body), ic)

@@ -30,6 +30,17 @@ func New() service.IUser {
 	return &sUser{}
 }
 
+func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
+
+	count, err := dao.App.Ctx(ctx).Fields("id").Where(do.App{
+		Domain: in.Host,
+	}).Count()
+	if err != nil {
+		return false
+	}
+	return count != 0
+}
+
 // Create creates user account.
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error) {
 	//设备

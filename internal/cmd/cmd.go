@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -15,6 +16,8 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/hello"
 	"proxyServer/internal/controller/user"
+	"proxyServer/internal/model"
+	"proxyServer/internal/service"
 	"proxyServer/ipc"
 	"strings"
 )
@@ -66,11 +69,13 @@ var (
 				req.Header = strings.Join(r.Header["Content-Type"], "")
 				req.Method = r.Method
 				req.URL = GetURL(r)
+				req.Host = GetHost(r)
 				res, err = Proxy2Ipc(ctx, hub, req)
 				if err != nil {
-					log.Fatalln("Proxy2Ipc err is ", err)
+					log.Fatalln("Proxy2Ipc err: ", err)
 				}
-				r.Response.WriteJson(res)
+				//r.Response.WriteJson(res)
+				r.Response.Write(res)
 			})
 
 			s.Group("/", func(group *ghttp.RouterGroup) {
@@ -152,8 +157,19 @@ func GetURL(r *ghttp.Request) (Url string) {
 	return strings.Join([]string{scheme, r.Host, r.RequestURI}, "")
 }
 
+func GetHost(r *ghttp.Request) (Host string) {
+	return strings.Join([]string{r.Host}, "")
+}
+
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
 	res = &v1.IpcTestRes{}
+	// 验证 req.Host 是否存于数据库中
+	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
+	if !valCheckUrl {
+		//抱歉，您的域名尚未注册
+		res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
+		return res, nil
+	}
 	client := hub.GetClient("test")
 	//fmt.Printf("client: %#v\n", client)
 	if client == nil {
@@ -167,7 +183,7 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.Ipc
 		Header: map[string]string{"Content-Type": req.Header},
 	})
 	resIpc, err := clientIpc.Send(reqIpc)
-	fmt.Printf("------------resIpc", resIpc)
+	fmt.Printf("------------resIpc:%#v\n", resIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
 		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
@@ -176,11 +192,11 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.Ipc
 	}
 	//todo
 
-	//for k, v := range resIpc.Header {
-	//	fmt.Printf("------------k", k)
-	//	fmt.Printf("-----------v", v)
-	//	//w.Header().Set(k, v)
-	//}
+	for k, v := range resIpc.Header {
+		fmt.Printf("-----------k:%#v\n", k)
+		fmt.Printf("-----------v:%#v\n", v)
+		//w.Header().Set(k, v)
+	}
 
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {

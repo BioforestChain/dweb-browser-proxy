@@ -168,7 +168,7 @@ func (bipc *BaseIPC) RegisterReqID(reqID uint64, resCh chan *Response) {
 
 	bipc.OnMessage(func(oc interface{}, ipc IPC) {
 		if res, ok := oc.(*Response); ok && res.Type == RESPONSE {
-			if resch, has := bipc.reqResMap[res.ReqID]; has {
+			if resch, has := bipc.getResFromReqResMap(res.ReqID); has {
 				bipc.deleteReqResMap(res.ReqID)
 				resch <- res
 				close(resch)
@@ -197,6 +197,13 @@ func (bipc *BaseIPC) createSignal(autoStart bool) *Signal {
 		signal.Clear()
 	})
 	return signal
+}
+
+func (bipc *BaseIPC) getResFromReqResMap(reqID uint64) (resChan chan<- *Response, ok bool) {
+	bipc.mutex.Lock()
+	defer bipc.mutex.Unlock()
+	resChan, ok = bipc.reqResMap[reqID]
+	return resChan, ok
 }
 
 func (bipc *BaseIPC) GetReqResMap() map[uint64]chan<- *Response {
