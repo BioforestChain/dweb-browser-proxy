@@ -58,12 +58,12 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 	// 监听并处理请求，echo请求数据
 	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
 		request := req.(*ipc.Request)
-		if request.URL == "https://www.example.com/search" {
+		if request.URL == "https://www.example.com/search" && request.Method == ipc.POST {
 			bodyReceiver := request.Body.(*ipc.BodyReceiver)
 			body := bodyReceiver.GetMetaBody().Data
 			log.Println("onRequest: ", request.URL, string(body), ic)
 
-			// todo 处理request
+			// 处理request
 
 			if err := ic.PostMessage(request); err != nil {
 				log.Println("post message err: ", err)
