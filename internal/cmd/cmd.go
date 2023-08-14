@@ -59,13 +59,13 @@ var (
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
-			var req v1.IpcTestReq
 			s.BindHandler("/*any", func(r *ghttp.Request) {
-
 				var (
-					res *v1.IpcTestRes
+					req *v1.IpcReq
+					res *v1.IpcRes
 					err error
 				)
+				req = &v1.IpcReq{}
 				req.Header = strings.Join(r.Header["Content-Type"], "")
 				req.Method = r.Method
 				req.URL = GetURL(r)
@@ -161,8 +161,15 @@ func GetHost(r *ghttp.Request) (Host string) {
 	return strings.Join([]string{r.Host}, "")
 }
 
-func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
-	res = &v1.IpcTestRes{}
+func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes, err error) {
+	req = &v1.IpcReq{
+		Host:   req.Host,
+		Method: req.Method,
+		URL:    req.URL,
+		Header: req.Header,
+	}
+
+	res = &v1.IpcRes{}
 	// 验证 req.Host 是否存于数据库中
 	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
 	if !valCheckUrl {
@@ -171,7 +178,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.Ipc
 		return res, nil
 	}
 	client := hub.GetClient("test")
-	//fmt.Printf("client: %#v\n", client)
 	if client == nil {
 		res.Ipc = "The service is unavailable"
 		return res, nil
@@ -191,7 +197,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req v1.IpcTestReq) (res *v1.Ipc
 		return res, err
 	}
 	//todo
-
 	for k, v := range resIpc.Header {
 		fmt.Printf("-----------k:%#v\n", k)
 		fmt.Printf("-----------v:%#v\n", v)

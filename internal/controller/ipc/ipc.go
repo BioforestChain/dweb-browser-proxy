@@ -25,8 +25,8 @@ func New(hub *ws.Hub) *Controller {
 	return &Controller{hub: hub}
 }
 
-func (a *Controller) Test(ctx context.Context, req *v1.IpcTestReq) (res *v1.IpcTestRes, err error) {
-	res = &v1.IpcTestRes{}
+func (a *Controller) Test(ctx context.Context, req *v1.IpcReq) (res *v1.IpcRes, err error) {
+	res = &v1.IpcRes{}
 
 	client := a.hub.GetClient("test")
 	if client == nil {

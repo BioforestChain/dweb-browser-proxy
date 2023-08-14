@@ -38,7 +38,7 @@ func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool 
 	if err != nil {
 		return false
 	}
-	return count != 0
+	return count > 0
 }
 
 // Create creates user account.
