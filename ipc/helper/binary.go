@@ -12,18 +12,22 @@ func U8aConcat(a []byte, b []byte) []byte {
 	return buf.Bytes()
 }
 
-// U32To8Concat 根据count生成4字节slice，并和b合并
-// 用于格式化数据为：前4字节表示消息大小，后续字节表示消息
-func U32To8Concat(count int, b []byte) []byte {
-	n := make([]byte, 4)
-	binary.LittleEndian.PutUint32(n, uint32(count))
-	return U8aConcat(n, b)
+// u32To8Concat 由data长度生成4字节slice，并和data合并，
+// 返回数据格式为：前缀4字节表示消息大小，后缀字节表示消息内容
+func u32To8Concat(data []byte) []byte {
+	prefix := make([]byte, 4)
+	binary.LittleEndian.PutUint32(prefix, uint32(len(data)))
+	return U8aConcat(prefix, data)
 }
 
-func U8aToU32(a []byte) uint32 {
-	return binary.LittleEndian.Uint32(a)
+func U8aToU32(a []byte) int {
+	return int(binary.LittleEndian.Uint32(a))
 }
 
 func BytesEqual(a []byte, b string) bool {
 	return bytes.Equal(a, []byte(b))
+}
+
+func FormatIPCData(data []byte) []byte {
+	return u32To8Concat(data)
 }

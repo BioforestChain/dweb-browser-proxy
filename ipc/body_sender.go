@@ -15,7 +15,9 @@ func NewBodySender(data interface{}, ipc IPC) *BodySender {
 	}
 
 	bs.metaBody = bodyAsMeta(data, ipc)
-	UsableByIpc(ipc, bs)
+
+	// 作为 "生产者"，第一持有这个 IpcBodySender
+	usableByIpc(ipc, bs)
 	return bs
 }
 
@@ -42,7 +44,8 @@ func streamAsMeta(stream *ReadableStream, ipc IPC) *MetaBody {
 	return mb
 }
 
-func UsableByIpc(ipc IPC, body *BodySender) {
+// usableByIpc 流数据监听及处理
+func usableByIpc(ipc IPC, body *BodySender) {
 	// TODO 待实现
 }
 

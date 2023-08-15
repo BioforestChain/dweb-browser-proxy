@@ -35,7 +35,7 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	}
 
 	if stream.highWaterMark == 0 {
-		stream.highWaterMark = 1024
+		stream.highWaterMark = 16
 	}
 
 	stream.dataChan = make(chan []byte, stream.highWaterMark)

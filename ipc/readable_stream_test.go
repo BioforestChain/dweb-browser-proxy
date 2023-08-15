@@ -8,7 +8,7 @@ import (
 func TestReadableStream(t *testing.T) {
 	stream := NewReadableStream()
 	wanted := "hello"
-	stream.Controller.Enqueue([]byte(wanted))
+	StreamDataEnqueue(stream, []byte(wanted))
 
 	ch := stream.GetReader().Read()
 	got := <-ch
@@ -45,8 +45,8 @@ func TestReadableStreamWithOptions(t *testing.T) {
 		var wanted = "hi"
 		stream := NewReadableStream(WithHighWaterMark(2))
 
-		stream.Controller.Enqueue([]byte("hi"))
-		stream.Controller.Enqueue([]byte("hi"))
+		StreamDataEnqueue(stream, []byte("hi"))
+		StreamDataEnqueue(stream, []byte("hi"))
 
 		go func() {
 			ch := stream.GetReader().Read()
@@ -66,7 +66,7 @@ func TestReadableStreamDefaultController_Enqueue(t *testing.T) {
 func TestReadableStreamDefaultReader_Read(t *testing.T) {
 	stream := NewReadableStream()
 	data := []byte("abc")
-	stream.Controller.Enqueue(data)
+	StreamDataEnqueue(stream, data)
 
 	got := make([]byte, 4)
 	ch := stream.GetReader().Read()

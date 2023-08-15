@@ -10,14 +10,14 @@ type Request struct {
 	URL        string
 	Method     METHOD
 	Header     Header
-	Body       interface{} // *Body | *BodySender | *BodyReceiver
+	Body       BodyInter // *Body | *BodySender | *BodyReceiver
 	Ipc        IPC
 	Type       MessageType
 	reqMessage *ReqMessage
 }
 
 // NewRequest body类型有*Body | *BodySender | *BodyReceiver
-func NewRequest(id uint64, url string, method METHOD, header Header, body interface{}, ipc IPC) *Request {
+func NewRequest(id uint64, url string, method METHOD, header Header, body BodyInter, ipc IPC) *Request {
 	req := &Request{
 		ID:     id,
 		URL:    url,
@@ -29,7 +29,7 @@ func NewRequest(id uint64, url string, method METHOD, header Header, body interf
 	}
 
 	if bodySender, ok := body.(*BodySender); ok {
-		UsableByIpc(ipc, bodySender)
+		usableByIpc(ipc, bodySender)
 	}
 
 	return req

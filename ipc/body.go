@@ -1,5 +1,13 @@
 package ipc
 
+type BodyInter interface {
+	Raw() interface{}
+	U8a() []byte
+	Stream() *ReadableStream
+	Text() string
+	GetMetaBody() *MetaBody
+}
+
 type Body struct {
 	metaBody *MetaBody
 	bodyHub  *BodyHub
