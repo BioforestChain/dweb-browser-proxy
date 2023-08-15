@@ -19,26 +19,20 @@ type (
 	sUser struct{}
 )
 
-var serverFileIniPath = "/var/opt/"
-var serverPort = "10000"
-
 func init() {
 	service.RegisterUser(New())
 }
-
 func New() service.IUser {
 	return &sUser{}
 }
-
 func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
-
 	count, err := dao.App.Ctx(ctx).Fields("id").Where(do.App{
 		Domain: in.Host,
 	}).Count()
 	if err != nil {
 		return false
 	}
-	return count != 0
+	return count > 0
 }
 
 // Create creates user account.
@@ -49,7 +43,6 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 		available bool
 		getUserId int
 	)
-	// Identification checks.
 	available, err = s.IsIdentificationAvailable(ctx, md5DeviceIdentification)
 	if err != nil {
 		return err
@@ -57,28 +50,24 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 	if !available {
 		return gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
 	}
-	//TODO 暂定
+	//TODO 暂定 没有用户名用设备标识填充
 	if in.Name == "" {
 		in.Name = md5DeviceIdentification
 	}
 	// Name checks.
 	available, err = s.IsNameAvailable(ctx, in.Name)
-
 	if err != nil {
 		return err
 	}
-
 	if !available {
-		//更新
+		//已存在的查出用户id
 		getUserId, err = s.GetUserId(ctx, in.Name)
 		if err != nil {
 			return err
 		}
-
 		//return gerror.Newf(`Name "%s" is already token by others`, in.Name)
 	}
 	nowTimestamp := time.Now().Unix()
-
 	return dao.ProxyServerUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		var (
 			result  sql.Result
@@ -137,13 +126,11 @@ func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData dataToDevic
 	}).Insert()
 	return result, err
 }
-
 func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error) {
 	condition := g.Map{
 		"name like ?": "%" + in.Name + "%",
 	}
 	all, total, err := dao.ProxyServerUser.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
-
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,28 +139,20 @@ func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entit
 	}
 	return entities, total, err
 }
-
 func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error) {
 	//app 域名全局唯一
-	//appInfo, err := dao.App.Ctx(ctx).Where(condition).One()
-	//fmt.Printf("appInfo: %#v\n", appInfo.Struct()
-	//fmt.Printf("appInfo.Map(): %#v\n", appInfo.Map())
-
 	var (
 		getUserId int
 		//getDeviceId int
 	)
-
 	getUserId, err = s.GetUserId(ctx, in.UserName)
 	if err != nil {
 		return nil, err
 	}
-
 	//getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
 	//if err != nil {
 	//	return nil, err
 	//}
-
 	condition := g.Map{
 		//"name like ?":    "%" + in.AppName + "%",
 		"identification": in.AppIdentification,
@@ -181,7 +160,6 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 		//"device_id":      getDeviceId,
 	}
 	one, err := dao.App.Ctx(ctx).Where(condition).One()
-
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +167,6 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 		return nil, err
 	}
 	return entities, err
-
 }
 
 // GenerateMD5ByDeviceIdentification
@@ -248,7 +225,6 @@ func (s *sUser) GetUserId(ctx context.Context, Name string) (int, error) {
 	}
 	return userId.Int(), nil
 }
-
 func (s *sUser) GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error) {
 	md5DeviceIdentification, _ := s.GenerateMD5ByDeviceIdentification(DeviceIdentification)
 	deviceId, err := dao.Device.Ctx(ctx).Fields("id").Where(do.Device{
@@ -287,7 +263,6 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 //	@return int
 //	@return error
 func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error) {
-
 	var (
 		available   bool
 		getUserId   int
@@ -306,18 +281,14 @@ func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput
 		return err
 	}
 	//设备id
-
 	getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
 	if getDeviceId == 0 {
 		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered`, in.DeviceIdentification)
 	}
-
 	if err != nil {
 		return err
 	}
-
 	nowTimestamp := time.Now().Unix()
-
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
 		if getUserId > 0 {
 			_, err = dao.App.Ctx(ctx).Data(do.App{

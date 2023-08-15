@@ -21,7 +21,6 @@ func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("clientReg Validator", err)
 	}
-
 	err = service.User().Create(ctx, model.UserCreateInput{
 		Name:           req.Name,
 		PublicKey:      req.PublicKey,
@@ -70,26 +69,23 @@ func (c *Controller) ClientListQuery(ctx context.Context, req *v1.ClientListQuer
 	}
 	return res, err
 }
-
 func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (res *v1.ClientQueryRes, err error) {
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("ClientQuery Validator", err)
 	}
 	//condition := model.AppQueryInput{}
-	//UserName             string
-	//AppName              string
-	//AppIdentification    string
-	//DeviceIdentification string
-
+	//app,device标识,用户名,app名
 	data, err := service.User().GetDomainInfo(ctx, model.AppQueryInput{
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
 		UserName:             req.UserName,
 		AppName:              req.AppName,
 	})
-	res = &v1.ClientQueryRes{
+	if err != nil {
+		return
+	}
+	return &v1.ClientQueryRes{
 		data.Domain,
 		data.Identification,
-	}
-	return res, err
+	}, err
 }
