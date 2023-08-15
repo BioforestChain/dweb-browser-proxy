@@ -16,6 +16,7 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/hello"
 	"proxyServer/internal/controller/user"
+	stringsHelper "proxyServer/internal/helper/strings"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
 	"proxyServer/ipc"
@@ -68,8 +69,8 @@ var (
 				req = &v1.IpcReq{}
 				req.Header = strings.Join(r.Header["Content-Type"], "")
 				req.Method = r.Method
-				req.URL = GetURL(r)
-				req.Host = GetHost(r)
+				req.URL = stringsHelper.GetURL(r)
+				req.Host = stringsHelper.GetHost(r)
 				res, err = Proxy2Ipc(ctx, hub, req)
 				if err != nil {
 					log.Fatalln("Proxy2Ipc err: ", err)
@@ -148,18 +149,6 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@param req
 //	@return res
 //	@return err
-
-func GetURL(r *ghttp.Request) (Url string) {
-	scheme := "http://"
-	if r.TLS != nil {
-		scheme = "https://"
-	}
-	return strings.Join([]string{scheme, r.Host, r.RequestURI}, "")
-}
-
-func GetHost(r *ghttp.Request) (Host string) {
-	return strings.Join([]string{r.Host}, "")
-}
 
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes, err error) {
 	req = &v1.IpcReq{
