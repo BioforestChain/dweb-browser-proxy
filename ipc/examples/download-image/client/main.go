@@ -1,13 +1,19 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 	"os"
+	"path"
 	"proxyServer/ipc"
 )
 
 func main() {
+	var downloadPath string
+	flag.StringVar(&downloadPath, "o", "./", "path to save")
+	flag.Parse()
+
 	conn, err := net.Dial("tcp", "127.0.0.1:8080")
 	if err != nil {
 		panic(err)
@@ -16,7 +22,7 @@ func main() {
 
 	ipcConn := NewIPCConn(conn)
 
-	req := ipcConn.ipc.Request("https://www.example.com/golang/img", ipc.RequestArgs{
+	req := ipcConn.ipc.Request("https://www.example.com/golang/golang.png", ipc.RequestArgs{
 		Method: "GET",
 		Body:   nil,
 		Header: nil,
@@ -30,7 +36,8 @@ func main() {
 		log.Fatalln(res.StatusCode, string(res.Body.GetMetaBody().Data))
 	}
 
-	if err := os.WriteFile("test.png", res.Body.GetMetaBody().Data, 0666); err != nil {
+	filename := path.Join(downloadPath, "golang.png")
+	if err := os.WriteFile(filename, res.Body.GetMetaBody().Data, 0666); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -59,7 +66,7 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 
 	go func() {
 		for {
-			data := make([]byte, 1024)
+			data := make([]byte, 512)
 			n, err := ipcConn.conn.Read(data)
 			if err != nil {
 				log.Fatalln(err)
