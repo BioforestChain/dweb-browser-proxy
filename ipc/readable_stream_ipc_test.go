@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"proxyServer/ipc/helper"
 	"testing"
+	"time"
 )
 
 func TestReadableStreamIPC_postMessage(t *testing.T) {
@@ -90,8 +91,8 @@ func TestReadableStreamIPC_BindIncomeStream(t *testing.T) {
 			}
 		}()
 
-		dataEncoding := helper.U32To8Concat(len(data), data)
-		proxyStream.Controller.Enqueue(dataEncoding)
+		dataEncoding := helper.FormatIPCData(data)
+		StreamDataEnqueue(proxyStream, dataEncoding)
 
 		<-ch
 	})
@@ -131,23 +132,58 @@ func Test_readIncomeStream(t *testing.T) {
 	t.Run("readIncomeStream", func(t *testing.T) {
 		raw := []byte("abcd")
 		ch := make(chan struct{})
-		var failed bool
+		var failed = true
 
 		proxyStream := NewReadableStream()
 
 		go func() {
 			defer close(ch)
 			for v := range readIncomeStream(proxyStream) {
-				if !bytes.Equal(v, raw) {
-					failed = true
+				if bytes.Equal(v, raw) {
+					failed = false
 					return
 				}
 			}
 		}()
 
-		dataEncoding := helper.U32To8Concat(len(raw), raw)
-		proxyStream.Controller.Enqueue(dataEncoding)
+		dataEncoding := helper.FormatIPCData(raw)
+		StreamDataEnqueue(proxyStream, dataEncoding)
 		// then close stream
+		time.Sleep(time.Millisecond * 10)
+		proxyStream.Controller.Close()
+
+		<-ch
+
+		if failed {
+			t.Fatal("readIncomeStream failed")
+		}
+	})
+
+	t.Run("readIncomeStream with consecutive enqueue", func(t *testing.T) {
+		raw := []byte("中文abcdefghijklmnopqrstuvwsyzABCDEFGHIJKLMNOPQRSTUVWSYZ0123456789")
+		dataEncoding := helper.FormatIPCData(raw)
+
+		proxyStream := NewReadableStream()
+
+		ch := make(chan struct{})
+		var failed = true
+
+		go func() {
+			defer close(ch)
+			for v := range readIncomeStream(proxyStream) {
+				if bytes.Equal(v, raw) {
+					failed = false
+					return
+				}
+			}
+		}()
+
+		for _, b := range dataEncoding {
+			StreamDataEnqueue(proxyStream, []byte{b})
+		}
+
+		// then close stream
+		time.Sleep(time.Millisecond * 10)
 		proxyStream.Controller.Close()
 
 		<-ch

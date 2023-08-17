@@ -1,11 +1,12 @@
-////go:build ignore
-//// +build ignore
-
 package main
 
 import (
+	_ "embed"
 	"log"
 	"net"
+	"net/http"
+	"os"
+	"path/filepath"
 	"proxyServer/ipc"
 )
 
@@ -58,13 +59,24 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 	// 监听并处理请求，echo请求数据
 	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
 		request := req.(*ipc.Request)
-		if request.URL == "https://www.example.com/search" && request.Method == ipc.POST {
-			body := request.Body.GetMetaBody().Data
-			log.Println("onRequest: ", request.URL, string(body), ic)
+		if request.URL == "https://www.example.com/golang/golang.png" && request.Method == ipc.GET {
 
-			// 处理request
+			var res *ipc.Response
+			path, _ := getAbsPath("ipc/examples/download-image/server/golang.png")
+			data, err := os.ReadFile(path)
+			if err != nil {
+				res = ipc.FromResponseText(
+					request.ID,
+					http.StatusInternalServerError,
+					ipc.NewHeader(),
+					http.StatusText(http.StatusInternalServerError),
+					ic,
+				)
+			} else {
+				res = ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), data, ic)
+			}
 
-			if err := ic.PostMessage(request); err != nil {
+			if err := ic.PostMessage(res); err != nil {
 				log.Println("post message err: ", err)
 			}
 		}
@@ -102,4 +114,13 @@ func (i *IPCConn) Close() {
 	i.ipc.Close()
 	i.proxyStream.Controller.Close()
 	i.conn.Close()
+}
+
+func getAbsPath(path string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cwd, path), nil
 }

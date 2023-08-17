@@ -1,20 +1,23 @@
 package ipc
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Response struct {
 	ReqID      uint64
 	StatusCode int
 	Header     Header
-	Body       interface{} // *Body | *BodySender | *BodyReceiver
+	Body       BodyInter // *Body | *BodySender | *BodyReceiver
 	Ipc        IPC
 	Type       MessageType
 	resMessage *ResMessage
 }
 
-func NewResponse(reqID uint64, statusCode int, header Header, body interface{}, ipc IPC) *Response {
+func NewResponse(reqID uint64, statusCode int, header Header, body BodyInter, ipc IPC) *Response {
 	if bodySender, ok := body.(*BodySender); ok {
-		UsableByIpc(ipc, bodySender)
+		usableByIpc(ipc, bodySender)
 	}
 
 	return &Response{Type: RESPONSE, ReqID: reqID, StatusCode: statusCode, Header: header, Body: body, Ipc: ipc}
@@ -41,6 +44,20 @@ func (res *Response) GetResMessage() *ResMessage {
 func (res *Response) MarshalJSON() ([]byte, error) {
 	reqMessage := res.GetResMessage()
 	return json.Marshal(reqMessage)
+}
+
+func FromResponseText(reqID uint64, statusCode int, header Header, text string, ipc IPC) *Response {
+	header.init("Content-Type", "text/plain")
+	body := FromBodySenderText(text, ipc)
+	return NewResponse(reqID, statusCode, NewHeader(), body, ipc)
+}
+
+func FromResponseBinary(reqID uint64, statusCode int, header Header, binary []byte, ipc IPC) *Response {
+	header.init("Content-Type", "application/octet-stream")
+	header.init("Content-Length", fmt.Sprintf("%d", len(binary)))
+	body := FromBodySenderBinary(binary, ipc)
+
+	return NewResponse(reqID, statusCode, header, body, ipc)
 }
 
 type ResMessage struct {

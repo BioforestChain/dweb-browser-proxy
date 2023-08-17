@@ -51,7 +51,7 @@ func NewBodyReceiver(metaBody *MetaBody, ipc IPC) *BodyReceiver {
 }
 
 // FromBodyReceiver 返回值 *BodySender | *BodyReceiver
-func FromBodyReceiver(metaBody *MetaBody, ipc IPC) interface{} {
+func FromBodyReceiver(metaBody *MetaBody, ipc IPC) BodyInter {
 	if br, ok := metaId_ipcBodySender_Map[metaBody.MetaID]; ok {
 		return br
 	} else {

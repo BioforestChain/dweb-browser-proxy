@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"log"
 	"proxyServer/ipc/helper"
 )
 
@@ -55,7 +52,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 				rsi.Close()
 				return nil
 			case helper.BytesEqual(data, "ping"):
-				rsi.stream.Controller.Enqueue(rsi.encode("ping"))
+				StreamDataEnqueue(rsi.stream, rsi.encode("ping"))
 				return nil
 			}
 		}
@@ -103,8 +100,8 @@ func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
 	}
 
 	// 使用littleEndian存储msgLen
-	chunk := helper.U32To8Concat(len(msgData), msgData)
-	rsi.stream.Controller.Enqueue(chunk)
+	chunk := helper.FormatIPCData(msgData)
+	StreamDataEnqueue(rsi.stream, chunk)
 	return
 }
 
@@ -121,13 +118,13 @@ func (rsi *ReadableStreamIPC) getStreamRead() <-chan []byte {
 }
 
 func (rsi *ReadableStreamIPC) doClose() {
-	rsi.stream.Controller.Enqueue(rsi.encode("close"))
+	StreamDataEnqueue(rsi.stream, rsi.encode("close"))
 	rsi.stream.Controller.Close()
 }
 
 func (rsi *ReadableStreamIPC) encode(msg string) []byte {
 	// TODO 这里msg要根据数据传输协议encode
-	return helper.U32To8Concat(len(msg), []byte(msg))
+	return helper.FormatIPCData([]byte(msg))
 }
 
 // SupportProtocol 默认json？
@@ -139,63 +136,81 @@ type SupportProtocol struct {
 // 读取时，按 | header | body | header1 | body1 | ... | 顺序读取
 // header由4字节组成，其uint32值，是body的大小
 func readIncomeStream(stream *ReadableStream) <-chan []byte {
-	var closeChan bool
-	var cache = new(bytes.Buffer)
-	var reqChan = make(chan []byte)
+	var dataChan = make(chan []byte)
 	go func() {
-		defer close(reqChan)
-		defer cache.Reset()
-
+		defer close(dataChan)
+		b := newBinaryStreamRead(stream)
 		for {
-			// stream closed
-			if closeChan {
-				break
-			}
-
-			select {
-			case <-stream.CloseChan:
-				fmt.Println("close stream chan")
-				closeChan = true
-				break
-			case v := <-stream.GetReader().Read():
-				cache.Write(v)
-			}
-
-			// 由于controller.Enqueue是把header和body一起入队，所以不存在一次流不完整情况？
-			//if cache.Len() < 4 {
-			//	continue
-			//}
-
-			// TODO 优化字节数组创建,使用sync.pool?
-			header := make([]byte, 4)
-			if _, err := cache.Read(header); err != nil {
-				if err == io.EOF {
-					continue
-				}
-				log.Println("read header error: ", err)
-				return
-			}
-
 			// TODO 如果传输的数据未按 header|body格式传输，则读取的数据会出问题
 			// 需要校验格式
-			size := helper.U8aToU32(header)
-			//if cache.Len() < int(size) {
-			//	continue
-			//}
-
-			// TODO 优化：如果size太大，可以拆分成小段读取
-			body := make([]byte, size)
-			if _, err := cache.Read(body); err != nil {
-				if err == io.EOF {
-					continue
-				}
-				log.Println("read body error: ", err)
-				return
+			header := b.read(4)
+			if header == nil {
+				break
 			}
 
-			reqChan <- body
+			bodySize := helper.U8aToU32(header)
+			body := b.read(bodySize)
+			if body == nil {
+				break
+			}
+
+			dataChan <- body
 		}
 	}()
 
-	return reqChan
+	return dataChan
+}
+
+type binaryStreamRead struct {
+	stream   *ReadableStream
+	readChan chan []byte
+	cache    *bytes.Buffer
+}
+
+func newBinaryStreamRead(stream *ReadableStream) *binaryStreamRead {
+	b := &binaryStreamRead{
+		stream:   stream,
+		readChan: make(chan []byte, 1),
+		cache:    new(bytes.Buffer),
+	}
+
+	go func() {
+		defer func() {
+			close(b.readChan)
+			b.cache.Reset()
+		}()
+
+		for {
+			select {
+			case <-b.stream.CloseChan:
+				return
+			case v := <-b.stream.GetReader().Read():
+				b.readChan <- v
+			}
+		}
+	}()
+
+	return b
+}
+
+// read 阻塞读取size byte
+// TODO 读数据时需要加超时处理，如连接中断导致数据不全
+func (b *binaryStreamRead) read(size int) []byte {
+	if b.cache.Len() >= size {
+		return b.cache.Next(size)
+	}
+
+	for v := range b.readChan {
+		b.cache.Write(v)
+
+		if b.cache.Len() >= size {
+			return b.cache.Next(size)
+		}
+	}
+
+	return nil
+}
+
+func StreamDataEnqueue(stream *ReadableStream, data []byte) {
+	stream.Controller.Enqueue(data)
 }
