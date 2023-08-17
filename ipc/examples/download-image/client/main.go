@@ -72,13 +72,14 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 				log.Fatalln(err)
 			}
 
+			// 往输入流proxyStream添加数据
 			ipc.StreamDataEnqueue(ipcConn.proxyStream, data[:n])
 		}
 	}()
 
 	go func() {
 		defer ipcConn.Close()
-		// 读取proxyStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
+		// 读取输入流proxyStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
 		if err := readableStreamIPC.BindIncomeStream(proxyStream); err != nil {
 			panic(err)
 		}

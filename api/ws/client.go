@@ -144,7 +144,7 @@ func (c *Client) GetIpc() ipc.IPC {
 func (c *Client) Close() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
+
 	if c.closed {
 		return
 	}

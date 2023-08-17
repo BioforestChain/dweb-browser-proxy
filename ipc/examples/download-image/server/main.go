@@ -62,7 +62,7 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 		if request.URL == "https://www.example.com/golang/golang.png" && request.Method == ipc.GET {
 
 			var res *ipc.Response
-			path, _ := getAbsPath("ipc/examples/octet-stream/server/golang.png")
+			path, _ := getAbsPath("ipc/examples/download-image/server/golang.png")
 			data, err := os.ReadFile(path)
 			if err != nil {
 				res = ipc.FromResponseText(
