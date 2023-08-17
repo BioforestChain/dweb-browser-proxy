@@ -16,7 +16,6 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/hello"
 	"proxyServer/internal/controller/user"
-	stringsHelper "proxyServer/internal/helper/strings"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
 	"proxyServer/ipc"
@@ -69,13 +68,14 @@ var (
 				req = &v1.IpcReq{}
 				req.Header = strings.Join(r.Header["Content-Type"], "")
 				req.Method = r.Method
-				req.URL = stringsHelper.GetURL(r)
-				req.Host = stringsHelper.GetHost(r)
+				req.URL = r.GetUrl()
+				req.Host = r.GetHost()
+				//TODO 暂定用 query 参数传递
+				req.ClientID = r.Get("clientID").String()
 				res, err = Proxy2Ipc(ctx, hub, req)
 				if err != nil {
 					log.Fatalln("Proxy2Ipc err: ", err)
 				}
-				//r.Response.WriteJson(res)
 				r.Response.Write(res)
 			})
 
@@ -152,12 +152,12 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes, err error) {
 	req = &v1.IpcReq{
-		Host:   req.Host,
-		Method: req.Method,
-		URL:    req.URL,
-		Header: req.Header,
+		Host:     req.Host,
+		Method:   req.Method,
+		URL:      req.URL,
+		Header:   req.Header,
+		ClientID: req.ClientID,
 	}
-
 	res = &v1.IpcRes{}
 	// 验证 req.Host 是否存于数据库中
 	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
@@ -166,7 +166,7 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
 		return res, nil
 	}
-	client := hub.GetClient("test")
+	client := hub.GetClient(req.ClientID)
 	if client == nil {
 		res.Ipc = "The service is unavailable"
 		return res, nil

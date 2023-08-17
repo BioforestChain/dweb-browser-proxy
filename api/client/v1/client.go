@@ -29,6 +29,7 @@ type ClientDomainRegReq struct {
 }
 
 type ClientRegRes struct {
+	DeviceIdentification string `json:"device_identification"` //设备标识，也就是clientID
 }
 
 type ClientQueryReq struct {
@@ -47,22 +48,12 @@ type ClientListQueryReq struct {
 }
 
 type ClientQueryRes struct {
-	Domain         string `json:"domain"`         // 列表
-	Identification string `json:"identification"` // 列表
+	Domain         string `json:"domain"`             // 域名
+	Identification string `json:"app_identification"` // app唯一标识
 }
 type ClientQueryListRes struct {
-	List []*do.User `json:"list"` // 列表
-	//Stats map[string]int        `json:"stats"` // 搜索统计
-	Page int `json:"page"` // 分页码
-	//Size     int `json:"size"`     // 分页数量
-	Total    int `json:"total"`     // 数据总数
-	LastPage int `json:"last_page"` // 最后一页
+	List     []*do.User `json:"list"`      // 列表
+	Page     int        `json:"page"`      // 分页码
+	Total    int        `json:"total"`     // 数据总数
+	LastPage int        `json:"last_page"` // 最后一页
 }
-
-//type ContentSearchOutput struct {
-//	List  []ContentSearchOutputItem `json:"list"`  // 列表
-//	Stats map[string]int            `json:"stats"` // 搜索统计
-//	Page  int                       `json:"page"`  // 分页码
-//	Size  int                       `json:"size"`  // 分页数量
-//	Total int                       `json:"total"` // 数据总数
-//}
