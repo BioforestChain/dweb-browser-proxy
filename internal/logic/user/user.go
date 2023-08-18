@@ -19,9 +19,6 @@ type (
 	sUser struct{}
 )
 
-var serverFileIniPath = "/var/opt/"
-var serverPort = "10000"
-
 func init() {
 	service.RegisterUser(New())
 }
@@ -58,7 +55,6 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 	}
 
 	if !available {
-		//更新
 		getUserId, err = s.GetUserId(ctx, in.Name)
 		if err != nil {
 			return err
