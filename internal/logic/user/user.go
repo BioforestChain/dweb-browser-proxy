@@ -86,7 +86,6 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 				if err != nil {
 					return err
 				}
-				return err
 			} else {
 				result, err = dao.ProxyServerUser.Ctx(ctx).Data(do.User{
 					Name:      in.Name,
@@ -104,8 +103,11 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 				}
 				reqData.UserId = getUserId
 				result, err = s.InsertDevice(ctx, tx, reqData)
-				return err
+				if err != nil {
+					return err
+				}
 			}
+			return nil
 		})
 }
 
@@ -129,10 +131,10 @@ func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData dataToDevic
 	return result, err
 }
 func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error) {
-	condition := g.Map{
-		"name like ?": "%" + in.Name + "%",
-	}
-	all, total, err := dao.ProxyServerUser.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
+	//condition := g.Map{
+	//	"name like ?": "%" + in.Name + "%",
+	//}
+	all, total, err := dao.ProxyServerUser.Ctx(ctx).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -150,6 +152,9 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 	getUserId, err = s.GetUserId(ctx, in.UserName)
 	if err != nil {
 		return nil, err
+	}
+	if getUserId == 0 {
+		return nil, gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
 	}
 	//getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
 	//if err != nil {
@@ -282,29 +287,30 @@ func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput
 	if err != nil {
 		return err
 	}
+	if getUserId == 0 {
+		return gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
+	}
 	//设备id
 	getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
-	if getDeviceId == 0 {
-		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered`, in.DeviceIdentification)
-	}
 	if err != nil {
 		return err
 	}
+	if getDeviceId == 0 {
+		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
+	}
 	nowTimestamp := time.Now().Unix()
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
-		if getUserId > 0 {
-			_, err = dao.App.Ctx(ctx).Data(do.App{
-				UserId:         getUserId,
-				DeviceId:       getDeviceId,
-				Name:           in.AppName,
-				Identification: in.AppIdentification,
-				Domain:         in.Domain,
-				Timestamp:      nowTimestamp,
-				Remark:         in.Remark,
-			}).Insert()
-			if err != nil {
-				return err
-			}
+		_, err = dao.App.Ctx(ctx).Data(do.App{
+			UserId:         getUserId,
+			DeviceId:       getDeviceId,
+			Name:           in.AppName,
+			Identification: in.AppIdentification,
+			Domain:         in.Domain,
+			Timestamp:      nowTimestamp,
+			Remark:         in.Remark,
+		}).Insert()
+		if err != nil {
+			return err
 		}
 		return nil
 	})

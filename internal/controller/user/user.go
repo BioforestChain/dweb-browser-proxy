@@ -80,12 +80,12 @@ func (c *Controller) ClientListQuery(ctx context.Context, req *v1.ClientListQuer
 	condition.Page, condition.Limit, condition.Offset = commonLogic.InitCodion(condition.Page, condition.Limit)
 	condition.Domain = req.Domain
 	list, total, err := service.User().GetUserList(ctx, condition)
-	res = &v1.ClientQueryListRes{
-		Total:    total,
-		Page:     condition.Page,
-		List:     list,
-		LastPage: commonLogic.GetLastPage(int64(total), condition.Limit),
-	}
+
+	res = new(v1.ClientQueryListRes)
+	res.Total = total
+	res.List = list
+	res.Page = condition.Page
+	res.LastPage = commonLogic.GetLastPage(int64(total), condition.Limit)
 	return res, err
 }
 

@@ -56,6 +56,7 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
+
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
@@ -81,7 +82,10 @@ var (
 
 			s.Group("/", func(group *ghttp.RouterGroup) {
 
-				group.Middleware(ghttp.MiddlewareHandlerResponse, MiddlewareCORS)
+				group.Middleware(
+					ghttp.MiddlewareHandlerResponse,
+					MiddlewareCORS,
+				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
 						user.New(),
@@ -92,7 +96,7 @@ var (
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
 
-				group.Middleware(MiddlewareAuth, MiddlewareErrorHandler)
+				//group.Middleware(MiddlewareAuth, MiddlewareErrorHandler)
 
 				// Special handler that needs authentication.
 				//group.Group("/", func(group *ghttp.RouterGroup) {
