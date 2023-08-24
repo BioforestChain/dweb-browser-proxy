@@ -36,7 +36,7 @@ func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool 
 }
 
 // Create creates user account.
-func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error) {
+func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
 	//设备
 	md5DeviceIdentification, _ := s.GenerateMD5ByDeviceIdentification(in.Identification)
 	var (
@@ -45,10 +45,10 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 	)
 	available, err = s.IsIdentificationAvailable(ctx, md5DeviceIdentification)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !available {
-		return gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
+		return nil, gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
 	}
 	//TODO 暂定 没有用户名用设备标识填充
 	if in.Name == "" {
@@ -57,54 +57,58 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (err error
 	// Name checks.
 	available, err = s.IsNameAvailable(ctx, in.Name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !available {
 		//已存在的查出用户id
 		getUserId, err = s.GetUserId(ctx, in.Name)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		//return gerror.Newf(`Name "%s" is already token by others`, in.Name)
 	}
 	nowTimestamp := time.Now().Unix()
-	return dao.ProxyServerUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		var (
-			result  sql.Result
-			err     error
-			reqData dataToDevice
-		)
-		reqData.Identification = md5DeviceIdentification
-		reqData.SrcIdentification = in.Identification
-		reqData.Timestamp = nowTimestamp
-		reqData.Remark = in.Remark
-		if getUserId > 0 {
-			reqData.UserId = getUserId
-			result, err = s.InsertDevice(ctx, tx, reqData)
-			if err != nil {
-				return err
+	return &v1.ClientRegRes{
+			md5DeviceIdentification,
+		}, dao.ProxyServerUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+			var (
+				result  sql.Result
+				err     error
+				reqData dataToDevice
+			)
+			reqData.Identification = md5DeviceIdentification
+			reqData.SrcIdentification = in.Identification
+			reqData.Timestamp = nowTimestamp
+			reqData.Remark = in.Remark
+			if getUserId > 0 {
+				reqData.UserId = getUserId
+				result, err = s.InsertDevice(ctx, tx, reqData)
+				if err != nil {
+					return err
+				}
+			} else {
+				result, err = dao.ProxyServerUser.Ctx(ctx).Data(do.User{
+					Name:      in.Name,
+					PublicKey: in.PublicKey,
+					Timestamp: nowTimestamp,
+					Remark:    in.Remark,
+				}).Insert()
+				if err != nil {
+					return err
+				}
+				// 同时入库device表
+				getUserId, err := result.LastInsertId()
+				if err != nil {
+					return err
+				}
+				reqData.UserId = getUserId
+				result, err = s.InsertDevice(ctx, tx, reqData)
+				if err != nil {
+					return err
+				}
 			}
-			return err
-		} else {
-			result, err = dao.ProxyServerUser.Ctx(ctx).Data(do.User{
-				Name:      in.Name,
-				PublicKey: in.PublicKey,
-				Timestamp: nowTimestamp,
-				Remark:    in.Remark,
-			}).Insert()
-			if err != nil {
-				return err
-			}
-			// 同时入库device表
-			getUserId, err := result.LastInsertId()
-			if err != nil {
-				return err
-			}
-			reqData.UserId = getUserId
-			result, err = s.InsertDevice(ctx, tx, reqData)
-			return err
-		}
-	})
+			return nil
+		})
 }
 
 type dataToDevice struct {
@@ -127,10 +131,10 @@ func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData dataToDevic
 	return result, err
 }
 func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error) {
-	condition := g.Map{
-		"name like ?": "%" + in.Name + "%",
-	}
-	all, total, err := dao.ProxyServerUser.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
+	//condition := g.Map{
+	//	"name like ?": "%" + in.Name + "%",
+	//}
+	all, total, err := dao.ProxyServerUser.Ctx(ctx).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -148,6 +152,9 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 	getUserId, err = s.GetUserId(ctx, in.UserName)
 	if err != nil {
 		return nil, err
+	}
+	if getUserId == 0 {
+		return nil, gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
 	}
 	//getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
 	//if err != nil {
@@ -268,7 +275,7 @@ func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput
 		getUserId   int
 		getDeviceId int
 	)
-	// Identification checks.
+	// domain checks.
 	available, err = s.IsDomainAvailable(ctx, in.Domain)
 	if err != nil {
 		return err
@@ -280,29 +287,29 @@ func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput
 	if err != nil {
 		return err
 	}
+	if getUserId == 0 {
+		return gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
+	}
 	//设备id
 	getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
-	if getDeviceId == 0 {
-		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered`, in.DeviceIdentification)
-	}
 	if err != nil {
 		return err
 	}
+	if getDeviceId == 0 {
+		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
+	}
 	nowTimestamp := time.Now().Unix()
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
-		if getUserId > 0 {
-			_, err = dao.App.Ctx(ctx).Data(do.App{
-				UserId:         getUserId,
-				DeviceId:       getDeviceId,
-				Name:           in.AppName,
-				Identification: in.AppIdentification,
-				Domain:         in.Domain,
-				Timestamp:      nowTimestamp,
-				Remark:         in.Remark,
-			}).Insert()
-			if err != nil {
-				return err
-			}
+		_, err = dao.App.Ctx(ctx).Data(do.App{
+			UserId:         getUserId,
+			DeviceId:       getDeviceId,
+			Name:           in.AppName,
+			Identification: in.AppIdentification,
+			Domain:         in.Domain,
+			Timestamp:      nowTimestamp,
+			Remark:         in.Remark,
+		}).Insert()
+		if err != nil {
 			return err
 		}
 		return nil
