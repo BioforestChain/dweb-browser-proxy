@@ -31,7 +31,7 @@ type BaseIPC struct {
 	streamSignal    *Signal
 	closeSignal     *Signal // 负责clear所有信号的observer
 	closed          bool    // 所有信号是否被关闭
-	reqResMap       map[uint64]chan<- *Response
+	reqResMap       *reqResMap
 	mutex           sync.Mutex
 	reqTimeout      time.Duration
 	postMessage     func(msg interface{}) error         // msg 入队ipc输出流
@@ -46,7 +46,7 @@ func NewBaseIPC(opts ...Option) *BaseIPC {
 
 	ipc := &BaseIPC{
 		uid:       atomic.LoadUint64(&UID),
-		reqResMap: make(map[uint64]chan<- *Response),
+		reqResMap: newReqResMap(),
 	}
 
 	for _, opt := range opts {
@@ -164,12 +164,12 @@ func (bipc *BaseIPC) AllocReqID() uint64 {
 }
 
 func (bipc *BaseIPC) RegisterReqID(reqID uint64, resCh chan *Response) {
-	bipc.updateReqResMap(reqID, resCh)
+	bipc.reqResMap.update(reqID, resCh)
 
 	bipc.OnMessage(func(oc interface{}, ipc IPC) {
 		if res, ok := oc.(*Response); ok && res.Type == RESPONSE {
-			if resch, has := bipc.getResFromReqResMap(res.ReqID); has {
-				bipc.deleteReqResMap(res.ReqID)
+			if resch, has := bipc.reqResMap.get(res.ReqID); has {
+				bipc.reqResMap.delete(res.ReqID)
 				resch <- res
 				close(resch)
 			}
@@ -199,29 +199,38 @@ func (bipc *BaseIPC) createSignal(autoStart bool) *Signal {
 	return signal
 }
 
-func (bipc *BaseIPC) getResFromReqResMap(reqID uint64) (resChan chan<- *Response, ok bool) {
-	bipc.mutex.Lock()
-	defer bipc.mutex.Unlock()
-	resChan, ok = bipc.reqResMap[reqID]
+type reqResMap struct {
+	v  map[uint64]chan<- *Response
+	mu sync.Mutex
+}
+
+func newReqResMap() *reqResMap {
+	return &reqResMap{v: make(map[uint64]chan<- *Response)}
+}
+
+func (r *reqResMap) get(reqID uint64) (resChan chan<- *Response, ok bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	resChan, ok = r.v[reqID]
 	return resChan, ok
 }
 
-func (bipc *BaseIPC) GetReqResMap() map[uint64]chan<- *Response {
-	bipc.mutex.Lock()
-	defer bipc.mutex.Unlock()
-	return bipc.reqResMap
+func (r *reqResMap) getAll() map[uint64]chan<- *Response {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.v
 }
 
-func (bipc *BaseIPC) updateReqResMap(reqID uint64, resCh chan<- *Response) {
-	bipc.mutex.Lock()
-	defer bipc.mutex.Unlock()
-	bipc.reqResMap[reqID] = resCh
+func (r *reqResMap) update(reqID uint64, resCh chan<- *Response) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.v[reqID] = resCh
 }
 
-func (bipc *BaseIPC) deleteReqResMap(reqID uint64) {
-	bipc.mutex.Lock()
-	defer bipc.mutex.Unlock()
-	delete(bipc.reqResMap, reqID)
+func (r *reqResMap) delete(reqID uint64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.v, reqID)
 }
 
 type Option func(ipc *BaseIPC)
