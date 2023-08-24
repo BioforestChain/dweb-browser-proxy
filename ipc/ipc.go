@@ -13,12 +13,12 @@ var ErrReqTimeout = errors.New("req timeout")
 type IPC interface {
 	Request(url string, init RequestArgs) *Request
 	Send(req *Request) (*Response, error)
-	PostMessage(msg interface{}) error // msg 入队输出流
+	PostMessage(msg interface{}) error // msg入队输出流
 	GetUID() uint64
 	GetSupportBinary() bool
 	OnClose(observer Observer)
 	Close()
-	GetStreamRead() <-chan []byte // 获取输出流的channel
+	GetStreamReader() *ReadableStreamDefaultReader // 获取输出流的channel
 }
 
 type BaseIPC struct {
@@ -34,9 +34,9 @@ type BaseIPC struct {
 	reqResMap       map[uint64]chan<- *Response
 	mutex           sync.Mutex
 	reqTimeout      time.Duration
-	postMessage     func(msg interface{}) error // msg 入队ipc输出流
-	doClose         func()                      // proxy stream被关闭时，需要close输出流
-	getStreamRead   func() <-chan []byte        // 获取ipc输出流read
+	postMessage     func(msg interface{}) error         // msg 入队ipc输出流
+	doClose         func()                              // proxy stream被关闭时，需要close输出流
+	getStreamReader func() *ReadableStreamDefaultReader // 获取ipc输出流read
 }
 
 var UID uint64
@@ -123,8 +123,8 @@ func (bipc *BaseIPC) PostMessage(msg interface{}) error {
 	return bipc.postMessage(msg)
 }
 
-func (bipc *BaseIPC) GetStreamRead() <-chan []byte {
-	return bipc.getStreamRead()
+func (bipc *BaseIPC) GetStreamReader() *ReadableStreamDefaultReader {
+	return bipc.getStreamReader()
 }
 
 func (bipc *BaseIPC) OnMessage(observer Observer) {
@@ -254,9 +254,9 @@ func WithDoClose(doClose func()) Option {
 	}
 }
 
-func WithStreamRead(getStreamRead func() <-chan []byte) Option {
+func WithStreamReader(getStreamReader func() *ReadableStreamDefaultReader) Option {
 	return func(ipc *BaseIPC) {
-		ipc.getStreamRead = getStreamRead
+		ipc.getStreamReader = getStreamReader
 	}
 }
 

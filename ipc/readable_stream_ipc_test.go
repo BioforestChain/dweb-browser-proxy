@@ -9,26 +9,29 @@ import (
 )
 
 func TestReadableStreamIPC_postMessage(t *testing.T) {
-	ipc := NewReadableStreamIPC(CLIENT, SupportProtocol{})
-	url := "https://www.example.com"
-
 	t.Run("request with empty body", func(t *testing.T) {
+		ipc := NewReadableStreamIPC(CLIENT, SupportProtocol{})
+		url := "https://www.example.com"
+
 		req := ipc.Request(url, RequestArgs{Method: "GET"})
 		err := ipc.postMessage(req)
 		if err != nil {
 			t.Fatal("readable stream ipc postMessage failed")
 		}
 
-		reqData := <-ipc.stream.GetReader().Read()
+		reqData, _ := ipc.stream.GetReader().Read()
 
 		var reqMessage ReqMessage
-		err = json.Unmarshal(reqData[4:], &reqMessage)
+		err = json.Unmarshal(reqData.Value[4:], &reqMessage)
 		if err != nil || reqMessage.URL != url || reqMessage.MetaBody == nil {
 			t.Fatal("readable stream ipc postMessage failed")
 		}
 	})
 
 	t.Run("request with body", func(t *testing.T) {
+		ipc := NewReadableStreamIPC(CLIENT, SupportProtocol{})
+		url := "https://www.example.com"
+
 		body := []byte("hi")
 		req := ipc.Request(url, RequestArgs{Method: "GET", Body: body})
 		err := ipc.postMessage(req)
@@ -36,7 +39,7 @@ func TestReadableStreamIPC_postMessage(t *testing.T) {
 			t.Fatal("readable stream ipc postMessage failed")
 		}
 
-		reqData := <-ipc.stream.GetReader().Read()
+		reqData, _ := ipc.stream.GetReader().Read()
 
 		//reqBytes, _ := json.Marshal(req)
 		//msgLen := binary.LittleEndian.Uint32(reqData[0:4])
@@ -45,7 +48,7 @@ func TestReadableStreamIPC_postMessage(t *testing.T) {
 		//}
 
 		var reqMessage ReqMessage
-		err = json.Unmarshal(reqData[4:], &reqMessage)
+		err = json.Unmarshal(reqData.Value[4:], &reqMessage)
 		if err != nil || !bytes.Equal(reqMessage.MetaBody.Data, body) {
 			t.Fatal("readable stream ipc postMessage failed")
 		}
@@ -92,7 +95,7 @@ func TestReadableStreamIPC_BindIncomeStream(t *testing.T) {
 		}()
 
 		dataEncoding := helper.FormatIPCData(data)
-		StreamDataEnqueue(proxyStream, dataEncoding)
+		_ = proxyStream.Enqueue(dataEncoding)
 
 		<-ch
 	})
@@ -147,7 +150,7 @@ func Test_readIncomeStream(t *testing.T) {
 		}()
 
 		dataEncoding := helper.FormatIPCData(raw)
-		StreamDataEnqueue(proxyStream, dataEncoding)
+		_ = proxyStream.Enqueue(dataEncoding)
 		// then close stream
 		time.Sleep(time.Millisecond * 10)
 		proxyStream.Controller.Close()
@@ -179,7 +182,7 @@ func Test_readIncomeStream(t *testing.T) {
 		}()
 
 		for _, b := range dataEncoding {
-			StreamDataEnqueue(proxyStream, []byte{b})
+			_ = proxyStream.Enqueue([]byte{b})
 		}
 
 		// then close stream

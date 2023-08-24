@@ -1,26 +1,39 @@
 package ipc
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 )
 
+var ErrClosedStream = errors.New("this readable stream has been closed")
+var ErrEnqueue = errors.New("failed to execute 'enqueue' on 'ReadableStreamDefaultController': " +
+	"Cannot enqueue a chunk into a closed readable stream")
+var ErrReadStream = errors.New("failed to execute 'read' on 'ReadableStreamDefaultReader': " +
+	"This readable stream reader has been released and cannot be used to read from its previous owner stream")
+var ErrCancelStream = errors.New("failed to execute 'cancel' on 'ReadableStream': Cannot cancel a locked stream")
+var ErrGetReader = errors.New("failed to execute 'getReader' on 'ReadableStream': ReadableStreamDefaultReader constructor " +
+	"can only accept readable streams that are not yet locked to a reader")
+
 // ReadableStream Streams API的不完全实现 https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-// controller.close功能不完全实现
 // backpressure/queuing strategies机制未实现
-// reader.cancel功能未实现
 type ReadableStream struct {
 	ID            string
 	dataChan      chan []byte
-	mutex         sync.RWMutex
-	highWaterMark uint64 // default 1024
-	reader        *ReadableStreamDefaultReader
-	onStart       Hook
-	onPull        Hook
+	closed        bool   // true when close(dataChan)
+	highWaterMark uint64 // default 1
+	readerLocked  bool
+	mu            sync.Mutex
+	onStart       Hook // onStart使用不当会造成goroutine泄露，因为没有退出机制
+	onPull        Hook // controller.enqueue(xx) 或 reader.read()时，都会触发执行
 	onCancel      func()
 	Controller    *ReadableStreamDefaultController
-	CloseChan     chan struct{} // 关闭stream的channel
+	cancelChan    chan struct{} // used when stream or reader calls Cancel
+	canceled      bool          // true when stream or reader Cancel
+	pullChan      chan struct{}
+	pullClosed    bool
 }
 
 type Hook func(controller *ReadableStreamDefaultController)
@@ -35,16 +48,51 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	}
 
 	if stream.highWaterMark == 0 {
-		stream.highWaterMark = 16
+		stream.highWaterMark = 1
 	}
 
 	stream.dataChan = make(chan []byte, stream.highWaterMark)
-	stream.CloseChan = make(chan struct{})
-	stream.reader = &ReadableStreamDefaultReader{stream: stream}
+	stream.cancelChan = make(chan struct{})
+	stream.pullChan = make(chan struct{}, 1)
 	stream.Controller = &ReadableStreamDefaultController{stream: stream}
 
 	if stream.onStart != nil {
-		stream.onStart(stream.Controller)
+		go func() {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Println("ReadableStream start panic: ", err)
+				}
+			}()
+
+			stream.onStart(stream.Controller)
+		}()
+	}
+
+	if stream.onPull != nil {
+		go func() {
+			stream.pulling()
+
+			for {
+				select {
+				case <-stream.cancelChan:
+					return
+				case _, ok := <-stream.pullChan:
+					if !ok {
+						return
+					}
+					stream.pulling()
+				}
+			}
+		}()
+	}
+
+	if stream.onCancel != nil {
+		go func() {
+			select {
+			case <-stream.cancelChan:
+				stream.onCancel()
+			}
+		}()
 	}
 
 	atomic.AddUint64(&streamIDAcc, 1)
@@ -54,39 +102,152 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 }
 
 func (stream *ReadableStream) GetReader() *ReadableStreamDefaultReader {
-	return stream.reader
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	if stream.readerLocked {
+		panic("Failed to execute 'GetReader' on 'ReadableStream': ReadableStreamDefaultReader constructor " +
+			"can only accept readable streams that are not yet locked to a reader")
+	}
+
+	stream.readerLocked = true
+	return &ReadableStreamDefaultReader{stream: stream}
 }
 
-func (stream *ReadableStream) Cancel() {
+// Cancel is used when you've completely finished with the stream and don't need any more data from it,
+// even if there are chunks enqueued waiting to be read.
+// That data is lost after cancel is called, and the stream is not readable any more.
+// To read those chunks still and not completely get rid of the stream,
+// you'd use ReadableStreamDefaultController.Close().
+func (stream *ReadableStream) Cancel() error {
+	if stream.readerLocked {
+		return ErrCancelStream
+	}
 
+	stream.close()
+	stream.cancel()
+	return nil
 }
 
 func (stream *ReadableStream) Len() int {
 	return len(stream.dataChan)
 }
 
+func (stream *ReadableStream) Enqueue(data []byte) (err error) {
+	return stream.Controller.Enqueue(data)
+}
+
+func (stream *ReadableStream) close() {
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	if !stream.closed {
+		stream.closed = true
+		close(stream.dataChan)
+	}
+}
+
+func (stream *ReadableStream) cancel() {
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	if !stream.canceled {
+		stream.canceled = true
+		close(stream.cancelChan)
+	}
+}
+
+func (stream *ReadableStream) pull() {
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	if len(stream.pullChan) == 0 && !stream.pullClosed {
+		stream.pullChan <- struct{}{}
+	}
+}
+
+func (stream *ReadableStream) pulling() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("ReadableStream pull panic: ", err)
+		}
+	}()
+
+	v := stream.Controller.desiredSize()
+	if v > 0 {
+		stream.onPull(stream.Controller)
+	}
+}
+
+func (stream *ReadableStream) stopPull() {
+	stream.mu.Lock()
+	defer stream.mu.Unlock()
+
+	if !stream.pullClosed {
+		close(stream.pullChan)
+		stream.pullClosed = true
+	}
+}
+
 type ReadableStreamDefaultController struct {
 	stream *ReadableStream
 }
 
-func (r *ReadableStreamDefaultController) Enqueue(data []byte) {
-	r.stream.dataChan <- data
+func (ctrl *ReadableStreamDefaultController) Enqueue(data []byte) (err error) {
+	defer func() {
+		if er := recover(); er != nil {
+			err = ErrEnqueue
+		}
+		return
+	}()
+
+	ctrl.stream.dataChan <- data
+
+	ctrl.stream.pull()
+	return
 }
 
 // Close Readers will still be able to read any previously-enqueued chunks from the stream,
 // but once those are read, the stream will become closed.
 // If you want to completely get rid of the stream and discard any enqueued chunks,
 // you'd use ReadableStream.Cancel() or ReadableStreamDefaultReader.Cancel().
-func (r *ReadableStreamDefaultController) Close() {
-	close(r.stream.CloseChan)
+func (ctrl *ReadableStreamDefaultController) Close() {
+	ctrl.stream.close()
+	ctrl.stream.stopPull()
+}
+
+func (ctrl *ReadableStreamDefaultController) desiredSize() int {
+	return int(ctrl.stream.highWaterMark) - ctrl.stream.Len()
 }
 
 type ReadableStreamDefaultReader struct {
-	stream *ReadableStream
+	stream   *ReadableStream
+	released bool // whether to release a stream
 }
 
-func (reader *ReadableStreamDefaultReader) Read() <-chan []byte {
-	return reader.stream.dataChan
+type StreamResult struct {
+	Done  bool
+	Value []byte
+}
+
+func (reader *ReadableStreamDefaultReader) Read() (*StreamResult, error) {
+	if reader.released {
+		return nil, ErrReadStream
+	}
+
+	if reader.stream.canceled {
+		return &StreamResult{Done: true, Value: nil}, nil
+	}
+
+	reader.stream.pull()
+
+	data, ok := <-reader.stream.dataChan
+	if !ok {
+		reader.stream.stopPull()
+		return &StreamResult{Done: true, Value: nil}, nil
+	}
+
+	return &StreamResult{Value: data}, nil
 }
 
 // Cancel Calling this method signals a loss of interest in the stream by a consumer.
@@ -95,8 +256,12 @@ func (reader *ReadableStreamDefaultReader) Read() <-chan []byte {
 // That data is lost after cancel is called, and the stream is not readable any more.
 // To read those chunks still and not completely get rid of the stream,
 // you'd use ReadableStreamDefaultController.Close().
+//
+// If the reader is active, the cancel() method behaves the same
+// as that for the associated stream (ReadableStream.Cancel()).
 func (reader *ReadableStreamDefaultReader) Cancel() {
-
+	reader.stream.close()
+	reader.stream.cancel()
 }
 
 // Closed https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/closed
@@ -108,7 +273,11 @@ func (reader *ReadableStreamDefaultReader) Closed() {
 }
 
 func (reader *ReadableStreamDefaultReader) ReleaseLock() {
+	reader.stream.mu.Lock()
+	defer reader.stream.mu.Unlock()
 
+	reader.stream.readerLocked = false
+	reader.released = true
 }
 
 type ReadableStreamOption func(stream *ReadableStream)

@@ -40,7 +40,7 @@ func handleConnection(ipcConn *IPCConn) {
 		return
 	}
 
-	ipc.StreamDataEnqueue(ipcConn.proxyStream, buffer[:n])
+	_ = ipcConn.proxyStream.Enqueue(buffer[:n])
 }
 
 type IPCConn struct {

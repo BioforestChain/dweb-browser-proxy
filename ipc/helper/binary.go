@@ -28,6 +28,10 @@ func BytesEqual(a []byte, b string) bool {
 	return bytes.Equal(a, []byte(b))
 }
 
+func GetBodySize(header []byte) int {
+	return U8aToU32(header)
+}
+
 func FormatIPCData(data []byte) []byte {
 	return u32To8Concat(data)
 }

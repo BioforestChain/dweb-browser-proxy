@@ -73,7 +73,8 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 			}
 
 			// 往输入流proxyStream添加数据
-			ipc.StreamDataEnqueue(ipcConn.proxyStream, data[:n])
+			_ = ipcConn.proxyStream.Enqueue(data[:n])
+
 		}
 	}()
 

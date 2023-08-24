@@ -10,9 +10,22 @@ import (
 	"net"
 	"proxyServer/ipc"
 	"proxyServer/ipc/helper"
+	"sync"
 )
 
 func main() {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			do(&wg)
+		}()
+	}
+	wg.Wait()
+}
+
+func do(wg *sync.WaitGroup) {
+	defer wg.Done()
 	conn, err := net.Dial("tcp", "127.0.0.1:8080")
 	if err != nil {
 		panic(err)

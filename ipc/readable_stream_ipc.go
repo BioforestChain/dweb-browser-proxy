@@ -26,7 +26,7 @@ func NewReadableStreamIPC(role ROLE, proto SupportProtocol) *ReadableStreamIPC {
 		WithPostMessage(ipc.postMessage),
 		WithSupportProtocol(ipc.supportProtocol),
 		WithDoClose(ipc.doClose),
-		WithStreamRead(ipc.getStreamRead),
+		WithStreamReader(ipc.getStreamReader),
 	)
 
 	return ipc
@@ -52,7 +52,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 				rsi.Close()
 				return nil
 			case helper.BytesEqual(data, "ping"):
-				StreamDataEnqueue(rsi.stream, rsi.encode("ping"))
+				_ = rsi.stream.Enqueue(rsi.encode("ping"))
 				return nil
 			}
 		}
@@ -101,24 +101,30 @@ func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
 
 	// 使用littleEndian存储msgLen
 	chunk := helper.FormatIPCData(msgData)
-	StreamDataEnqueue(rsi.stream, chunk)
+	_ = rsi.stream.Enqueue(chunk)
 	return
 }
 
 // ReadFromStream 从输出流读取数据
 func (rsi *ReadableStreamIPC) ReadFromStream(cb func([]byte)) {
-	for data := range rsi.stream.GetReader().Read() {
-		cb(data)
+	reader := rsi.stream.GetReader()
+	for {
+		d, err := reader.Read()
+		if err != nil {
+			return
+		}
+
+		cb(d.Value)
 	}
 }
 
-// getStreamRead 获取输出流channel
-func (rsi *ReadableStreamIPC) getStreamRead() <-chan []byte {
-	return rsi.stream.GetReader().Read()
+// getStreamReader 获取输出流channel
+func (rsi *ReadableStreamIPC) getStreamReader() *ReadableStreamDefaultReader {
+	return rsi.stream.GetReader()
 }
 
 func (rsi *ReadableStreamIPC) doClose() {
-	StreamDataEnqueue(rsi.stream, rsi.encode("close"))
+	_ = rsi.stream.Enqueue(rsi.encode("close"))
 	rsi.stream.Controller.Close()
 }
 
@@ -148,7 +154,7 @@ func readIncomeStream(stream *ReadableStream) <-chan []byte {
 				break
 			}
 
-			bodySize := helper.U8aToU32(header)
+			bodySize := helper.GetBodySize(header)
 			body := b.read(bodySize)
 			if body == nil {
 				break
@@ -180,13 +186,13 @@ func newBinaryStreamRead(stream *ReadableStream) *binaryStreamRead {
 			b.cache.Reset()
 		}()
 
+		reader := b.stream.GetReader()
 		for {
-			select {
-			case <-b.stream.CloseChan:
+			v, err := reader.Read()
+			if err != nil {
 				return
-			case v := <-b.stream.GetReader().Read():
-				b.readChan <- v
 			}
+			b.readChan <- v.Value
 		}
 	}()
 
@@ -209,8 +215,4 @@ func (b *binaryStreamRead) read(size int) []byte {
 	}
 
 	return nil
-}
-
-func StreamDataEnqueue(stream *ReadableStream, data []byte) {
-	stream.Controller.Enqueue(data)
 }

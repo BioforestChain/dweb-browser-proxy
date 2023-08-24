@@ -65,7 +65,7 @@ func TestBaseIPC_ConcurrentRequest(t *testing.T) {
 	// emit response和send req并发的话，可能导致deadlock问题
 	// 使用时一定是先有send req，后有emit response，所以这里加for等待req发送
 	for len(ipc.GetReqResMap()) != 3 {
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 10)
 	}
 
 	ipc.msgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)

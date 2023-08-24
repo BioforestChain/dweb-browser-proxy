@@ -81,7 +81,9 @@ func (c *Client) readPump() {
 			break
 		}
 
-		c.proxyStream.Controller.Enqueue(message)
+		if err := c.proxyStream.Enqueue(message); err != nil {
+			log.Println(err)
+		}
 
 		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		//c.hub.broadcast <- message
@@ -100,39 +102,44 @@ func (c *Client) writePump() {
 		c.Close()
 	}()
 
-	for {
-		select {
-		case message, ok := <-c.ipc.GetStreamRead():
-			//case message, ok := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				// The hub closed the channel.
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
+	reader := c.ipc.GetStreamReader()
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			_, _ = w.Write(message)
-
-			// Add queued messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				_, _ = w.Write(newline)
-				_, _ = w.Write(<-c.send)
-			}
-
-			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
+	go func() {
+		for {
+			<-ticker.C
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				log.Println(err)
+				reader.Cancel()
 				return
 			}
+		}
+	}()
+
+	for {
+		message, err := reader.Read()
+		_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+		if err != nil || message.Done {
+			// The hub closed the channel.
+			_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		}
+
+		w, err := c.conn.NextWriter(websocket.TextMessage)
+		if err != nil {
+			return
+		}
+		_, _ = w.Write(message.Value)
+
+		// Add queued messages to the current websocket message.
+		n := len(c.send)
+		for i := 0; i < n; i++ {
+			_, _ = w.Write(newline)
+			_, _ = w.Write(<-c.send)
+		}
+
+		if err := w.Close(); err != nil {
+			return
 		}
 	}
 }
