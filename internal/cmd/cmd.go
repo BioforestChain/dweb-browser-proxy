@@ -35,12 +35,6 @@ func MiddlewareAuth(r *ghttp.Request) {
 	}
 }
 
-func MiddlewareCORS(r *ghttp.Request) {
-	//r.Response.Writeln("cors")
-	r.Response.CORSDefault()
-	r.Middleware.Next()
-}
-
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.Status >= http.StatusInternalServerError {
@@ -75,7 +69,7 @@ var (
 				req.ClientID = r.Get("clientID").String()
 				res, err = Proxy2Ipc(ctx, hub, req)
 				if err != nil {
-					log.Fatalln("Proxy2Ipc err: ", err)
+					g.Log().Warning(ctx, "Proxy2Ipc err :", err)
 				}
 				r.Response.Write(res)
 			})
@@ -84,9 +78,10 @@ var (
 
 				group.Middleware(
 					ghttp.MiddlewareHandlerResponse,
-					MiddlewareCORS,
+					ghttp.MiddlewareCORS,
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
+					//group.Middleware(service.Middleware().Auth)
 					group.Bind(
 						user.New(),
 						hello.New(),
