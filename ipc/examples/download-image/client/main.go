@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net"
@@ -27,7 +28,7 @@ func main() {
 		Body:   nil,
 		Header: nil,
 	})
-	res, err := ipcConn.ipc.Send(req)
+	res, err := ipcConn.ipc.Send(context.TODO(), req)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,7 +46,7 @@ func main() {
 
 type IPCConn struct {
 	ipc         ipc.IPC
-	proxyStream *ipc.ReadableStream
+	inputStream *ipc.ReadableStream
 	conn        net.Conn
 }
 
@@ -56,11 +57,11 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 		ProtoBuf:    false,
 	})
 
-	proxyStream := ipc.NewReadableStream()
+	inputStream := ipc.NewReadableStream()
 
 	ipcConn := &IPCConn{
 		ipc:         readableStreamIPC,
-		proxyStream: proxyStream,
+		inputStream: inputStream,
 		conn:        conn,
 	}
 
@@ -72,23 +73,22 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 				log.Fatalln(err)
 			}
 
-			// 往输入流proxyStream添加数据
-			_ = ipcConn.proxyStream.Enqueue(data[:n])
-
+			// 往输入流inputStream添加数据
+			_ = ipcConn.inputStream.Enqueue(data[:n])
 		}
 	}()
 
 	go func() {
 		defer ipcConn.Close()
-		// 读取输入流proxyStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
-		if err := readableStreamIPC.BindIncomeStream(proxyStream); err != nil {
+		// 读取输入流inputStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
+		if err := readableStreamIPC.BindInputStream(inputStream); err != nil {
 			panic(err)
 		}
 	}()
 
 	go func() {
 		// 读取输出流数据，然后response
-		readableStreamIPC.ReadFromStream(func(data []byte) {
+		readableStreamIPC.ReadFromOutputStream(func(data []byte) {
 			if _, err := ipcConn.conn.Write(data); err != nil {
 				panic(err)
 			}
@@ -100,6 +100,6 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 
 func (i *IPCConn) Close() {
 	i.ipc.Close()
-	i.proxyStream.Controller.Close()
+	i.inputStream.Controller.Close()
 	i.conn.Close()
 }

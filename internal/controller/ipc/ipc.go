@@ -41,7 +41,7 @@ func (a *Controller) Test(ctx context.Context, req *v1.IpcReq) (res *v1.IpcRes, 
 		Method: "GET",
 		Header: map[string]string{"Content-Type": "application/json"},
 	})
-	resIpc, err := clientIpc.Send(reqIpc)
+	resIpc, err := clientIpc.Send(context.TODO(), reqIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
 		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())

@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -16,8 +14,6 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/hello"
 	"proxyServer/internal/controller/user"
-	"proxyServer/internal/model"
-	"proxyServer/internal/service"
 	"proxyServer/ipc"
 	"strings"
 )
@@ -73,9 +69,9 @@ var (
 				req.Host = r.GetHost()
 				//TODO 暂定用 query 参数传递
 				req.ClientID = r.Get("clientID").String()
-				res, err = Proxy2Ipc(ctx, hub, req)
+				res, err = Proxy2Ipc(r.Context(), hub, req)
 				if err != nil {
-					log.Fatalln("Proxy2Ipc err: ", err)
+					log.Println("Proxy2Ipc err: ", err)
 				}
 				r.Response.Write(res)
 			})
@@ -164,12 +160,12 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 	}
 	res = &v1.IpcRes{}
 	// 验证 req.Host 是否存于数据库中
-	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
-	if !valCheckUrl {
-		//抱歉，您的域名尚未注册
-		res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
-		return res, nil
-	}
+	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
+	//if !valCheckUrl {
+	//	//抱歉，您的域名尚未注册
+	//	res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
+	//	return res, nil
+	//}
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
 		res.Ipc = "The service is unavailable"
@@ -181,8 +177,8 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		Method: req.Method,
 		Header: map[string]string{"Content-Type": req.Header},
 	})
-	resIpc, err := clientIpc.Send(reqIpc)
-	fmt.Printf("------------resIpc:%#v\n", resIpc)
+	resIpc, err := clientIpc.Send(ctx, reqIpc)
+	//fmt.Printf("------------resIpc:%#v\n", resIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
 		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
@@ -190,11 +186,11 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		return res, err
 	}
 	//todo
-	for k, v := range resIpc.Header {
-		fmt.Printf("-----------k:%#v\n", k)
-		fmt.Printf("-----------v:%#v\n", v)
-		//w.Header().Set(k, v)
-	}
+	//for k, v := range resIpc.Header {
+	//	fmt.Printf("-----------k:%#v\n", k)
+	//	fmt.Printf("-----------v:%#v\n", v)
+	//	//w.Header().Set(k, v)
+	//}
 
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {
@@ -203,5 +199,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		return res, err
 	}
 	res.Ipc = string(resStr)
+	//log.Println("proxy res: ", res)
 	return res, err
 }

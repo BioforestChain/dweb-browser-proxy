@@ -2,8 +2,10 @@ package ipc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"proxyServer/ipc/helper"
 )
 
@@ -11,39 +13,39 @@ type ReadableStreamIPC struct {
 	*BaseIPC
 	role            ROLE
 	supportProtocol SupportProtocol
-	stream          *ReadableStream // 输出流 TODO 需要考虑并发使用问题
-	proxyStream     *ReadableStream // 输入流
+	inputStream     *ReadableStream // 输入流，需通过BindInputStream实例化
+	outputStream    *ReadableStream // 输出流 TODO 需要考虑并发使用问题
 }
 
 func NewReadableStreamIPC(role ROLE, proto SupportProtocol) *ReadableStreamIPC {
 	ipc := &ReadableStreamIPC{
 		supportProtocol: proto,
 		role:            role,
-		stream:          NewReadableStream(),
+		outputStream:    NewReadableStream(),
 	}
 
 	ipc.BaseIPC = NewBaseIPC(
 		WithPostMessage(ipc.postMessage),
 		WithSupportProtocol(ipc.supportProtocol),
 		WithDoClose(ipc.doClose),
-		WithStreamReader(ipc.getStreamReader),
+		WithStreamReader(ipc.getOutputStreamReader),
 	)
 
 	return ipc
 }
 
-// BindIncomeStream reads messages from proxyStream and emit data.
-// A goroutine running BindIncomeStream is started for each proxyStream. The
+// BindInputStream reads messages from inputStream and emit data.
+// A goroutine running BindInputStream is started for each inputStream. The
 // application ensures that there is at most one reader on a stream by executing all
 // reads from this goroutine.
-// when calling proxyStream.Controller.Close() or reading encounters an error, the read stops
-func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err error) {
-	if rsi.proxyStream != nil {
+// when calling inputStream.Controller.Close() or reading encounters an error, the read stops
+func (rsi *ReadableStreamIPC) BindInputStream(inputStream *ReadableStream) (err error) {
+	if rsi.inputStream != nil {
 		return errors.New("income stream already bound")
 	}
-	rsi.proxyStream = proxyStream
+	rsi.inputStream = inputStream
 
-	for data := range readIncomeStream(rsi.proxyStream) {
+	for data := range readInputStream(rsi.inputStream) {
 		if len(data) == 4 || len(data) == 5 {
 			switch {
 			case helper.BytesEqual(data, "pong"):
@@ -52,7 +54,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 				rsi.Close()
 				return nil
 			case helper.BytesEqual(data, "ping"):
-				_ = rsi.stream.Enqueue(rsi.encode("ping"))
+				_ = rsi.outputStream.Enqueue(rsi.encode("ping"))
 				return nil
 			}
 		}
@@ -60,6 +62,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 		var msg interface{}
 
 		if rsi.supportProtocol.MessagePack {
+			panic("messagepack invalid")
 			// TODO 其它编码
 		} else {
 			msg, err = objectToIpcMessage(data, rsi)
@@ -67,6 +70,8 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 				return err
 			}
 		}
+
+		helper.PutBuffer(data)
 
 		rsi.msgSignal.Emit(msg, rsi)
 	}
@@ -78,7 +83,7 @@ func (rsi *ReadableStreamIPC) BindIncomeStream(proxyStream *ReadableStream) (err
 }
 
 // msg类型：*Request | *Response | Event | StreamData | Stream*
-func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
+func (rsi *ReadableStreamIPC) postMessage(ctx context.Context, msg interface{}) (err error) {
 	var msgRaw interface{}
 	switch v := msg.(type) {
 	case *Request:
@@ -99,18 +104,24 @@ func (rsi *ReadableStreamIPC) postMessage(msg interface{}) (err error) {
 		}
 	}
 
-	// 使用littleEndian存储msgLen
-	chunk := helper.FormatIPCData(msgData)
-	_ = rsi.stream.Enqueue(chunk)
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	default:
+		// 使用littleEndian存储msgLen
+		chunk := helper.FormatIPCData(msgData)
+		_ = rsi.outputStream.Enqueue(chunk)
+	}
+
 	return
 }
 
-// ReadFromStream 从输出流读取数据
-func (rsi *ReadableStreamIPC) ReadFromStream(cb func([]byte)) {
-	reader := rsi.stream.GetReader()
+// ReadFromOutputStream 从输出流读取数据
+func (rsi *ReadableStreamIPC) ReadFromOutputStream(cb func([]byte)) {
+	reader := rsi.outputStream.GetReader()
 	for {
 		d, err := reader.Read()
-		if err != nil {
+		if err != nil || d.Done {
 			return
 		}
 
@@ -118,14 +129,14 @@ func (rsi *ReadableStreamIPC) ReadFromStream(cb func([]byte)) {
 	}
 }
 
-// getStreamReader 获取输出流channel
-func (rsi *ReadableStreamIPC) getStreamReader() *ReadableStreamDefaultReader {
-	return rsi.stream.GetReader()
+// getOutputStreamReader 获取输出流channel
+func (rsi *ReadableStreamIPC) getOutputStreamReader() *ReadableStreamDefaultReader {
+	return rsi.outputStream.GetReader()
 }
 
 func (rsi *ReadableStreamIPC) doClose() {
-	_ = rsi.stream.Enqueue(rsi.encode("close"))
-	rsi.stream.Controller.Close()
+	_ = rsi.outputStream.Enqueue(rsi.encode("close"))
+	rsi.outputStream.Controller.Close()
 }
 
 func (rsi *ReadableStreamIPC) encode(msg string) []byte {
@@ -138,27 +149,29 @@ type SupportProtocol struct {
 	Raw, MessagePack, ProtoBuf bool
 }
 
-// readIncomeStream 会一直读取流数据，除非使用controller.Close()关闭流或发生错误
+// readInputStream 会阻塞读取流数据，除非使用controller.Close()关闭流或发生错误
 // 读取时，按 | header | body | header1 | body1 | ... | 顺序读取
 // header由4字节组成，其uint32值，是body的大小
-func readIncomeStream(stream *ReadableStream) <-chan []byte {
-	var dataChan = make(chan []byte)
+func readInputStream(stream *ReadableStream) <-chan []byte {
+	var dataChan = make(chan []byte, 1)
 	go func() {
 		defer close(dataChan)
 		b := newBinaryStreamRead(stream)
 		for {
 			// TODO 如果传输的数据未按 header|body格式传输，则读取的数据会出问题
 			// 需要校验格式
-			header := b.read(4)
-			if header == nil {
+			header, err := b.read(4)
+			if err != nil {
 				break
 			}
 
 			bodySize := helper.GetBodySize(header)
-			body := b.read(bodySize)
-			if body == nil {
+			body, err := b.read(bodySize)
+			if err != nil {
 				break
 			}
+
+			helper.PutBuffer(header)
 
 			dataChan <- body
 		}
@@ -189,9 +202,10 @@ func newBinaryStreamRead(stream *ReadableStream) *binaryStreamRead {
 		reader := b.stream.GetReader()
 		for {
 			v, err := reader.Read()
-			if err != nil {
+			if err != nil || v.Done {
 				return
 			}
+
 			b.readChan <- v.Value
 		}
 	}()
@@ -201,18 +215,24 @@ func newBinaryStreamRead(stream *ReadableStream) *binaryStreamRead {
 
 // read 阻塞读取size byte
 // TODO 读数据时需要加超时处理，如连接中断导致数据不全
-func (b *binaryStreamRead) read(size int) []byte {
+func (b *binaryStreamRead) read(size int) ([]byte, error) {
 	if b.cache.Len() >= size {
-		return b.cache.Next(size)
+		v := b.cache.Next(size)
+		c := helper.GetBuffer(len(v))
+		copy(c, v)
+		return c, nil
 	}
 
 	for v := range b.readChan {
 		b.cache.Write(v)
 
 		if b.cache.Len() >= size {
-			return b.cache.Next(size)
+			v := b.cache.Next(size)
+			c := helper.GetBuffer(len(v))
+			copy(c, v)
+			return c, nil
 		}
 	}
 
-	return nil
+	return nil, io.EOF
 }

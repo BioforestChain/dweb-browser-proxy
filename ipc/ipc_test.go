@@ -1,6 +1,7 @@
 package ipc
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -18,20 +19,37 @@ func TestBaseIPC_AllocReqID(t *testing.T) {
 }
 
 func TestBaseIPC_Request(t *testing.T) {
-	ipc := NewBaseIPC()
-	go func() {
-		ipc.msgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
-	}()
+	t.Run("request with timeout", func(t *testing.T) {
+		ipc := NewBaseIPC()
+		req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
 
-	req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
-	res, err := ipc.Send(req)
-	if err != nil {
-		t.Fatal("ipc request failed")
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
 
-	if res.Type != RESPONSE {
-		t.Fatal("ipc request failed")
-	}
+		_, err := ipc.Send(ctx, req)
+		if err == nil {
+			t.Fatal("ipc request should timeout but not")
+		}
+	})
+
+	t.Run("request", func(t *testing.T) {
+		ipc := NewBaseIPC()
+
+		go func() {
+			ipc.msgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
+		}()
+
+		req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
+		res, err := ipc.Send(context.TODO(), req)
+		if err != nil {
+			t.Fatal("ipc request failed")
+		}
+
+		if res.Type != RESPONSE {
+			t.Fatal("ipc request failed")
+		}
+	})
+
 }
 
 func TestBaseIPC_ConcurrentRequest(t *testing.T) {
@@ -54,7 +72,7 @@ func TestBaseIPC_ConcurrentRequest(t *testing.T) {
 			defer wg.Done()
 
 			req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
-			res, err := ipc.Send(req)
+			res, err := ipc.Send(context.TODO(), req)
 
 			mutex.Lock()
 			defer mutex.Unlock()
@@ -93,7 +111,7 @@ func TestBaseIPC_RequestTimeout(t *testing.T) {
 	ipc := NewBaseIPC(WithReqTimeout(10 * time.Millisecond))
 
 	req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
-	_, err := ipc.Send(req)
+	_, err := ipc.Send(context.TODO(), req)
 	if err == nil && !errors.Is(err, ErrReqTimeout) {
 		t.Fatal("ipc request timeout failed")
 	}

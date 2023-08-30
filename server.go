@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/url"
@@ -26,16 +26,18 @@ func main() {
 			log.Println("Error reading message: ", err)
 			return
 		}
-		fmt.Printf("Received message: %s\n", message)
+		//fmt.Printf("Received message: %s\n", message)
 
-		ipcConn.proxyStream.Controller.Enqueue(message)
+		if err := ipcConn.inputStream.Enqueue(message); err != nil {
+			log.Println("enqueue err: ", err)
+		}
 	}
 
 }
 
 type IPCConn struct {
 	ipc         ipc.IPC
-	proxyStream *ipc.ReadableStream
+	inputStream *ipc.ReadableStream
 	conn        *websocket.Conn
 }
 
@@ -49,15 +51,15 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 	// 监听并处理请求，echo请求数据
 	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
 		request := req.(*ipc.Request)
-		log.Println("on request: ", request.URL)
+		log.Println("on request: ", request.ID)
 
 		url, _ := url.ParseRequestURI(request.URL)
 
 		//if (url.Host + url.Path) == "www.example.com/search" {
 		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/test" {
-			bodyReceiver := request.Body.(*ipc.BodyReceiver)
-			body := bodyReceiver.GetMetaBody().Data
-			log.Println("onRequest: ", request.URL, string(body), ic)
+			//bodyReceiver := request.Body.(*ipc.BodyReceiver)
+			//body := bodyReceiver.GetMetaBody().Data
+			//log.Println("onRequest: ", request.URL, string(body), ic)
 
 			res := ipc.NewResponse(
 				request.ID,
@@ -69,33 +71,33 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 				ic,
 			)
 
-			if err := ic.PostMessage(res); err != nil {
+			if err := ic.PostMessage(context.TODO(), res); err != nil {
 				log.Println("post message err: ", err)
 			}
 		}
 	})
 
-	proxyStream := ipc.NewReadableStream()
+	inputStream := ipc.NewReadableStream()
 
 	ipcConn := &IPCConn{
 		ipc:         serverIPC,
-		proxyStream: proxyStream,
+		inputStream: inputStream,
 		conn:        conn,
 	}
 
 	go func() {
 		defer ipcConn.Close()
-		// 读取proxyStream数据并emit消息（接收消息并处理，然后把结果发送至内部流）
-		if err := serverIPC.BindIncomeStream(proxyStream); err != nil {
+		// 读取inputStream数据并emit消息（接收消息并处理，然后把结果发送至内部流）
+		if err := serverIPC.BindInputStream(inputStream); err != nil {
 			panic(err)
 		}
 	}()
 
 	go func() {
 		// 读取内部流数据，然后response
-		serverIPC.ReadFromStream(func(data []byte) {
-			log.Println("write msg: ", string(data))
+		serverIPC.ReadFromOutputStream(func(data []byte) {
 			if err := ipcConn.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+				log.Println("res msg err: ", err)
 				panic(err)
 			}
 		})
@@ -106,6 +108,6 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 func (i *IPCConn) Close() {
 	i.ipc.Close()
-	i.proxyStream.Controller.Close()
+	i.inputStream.Controller.Close()
 	i.conn.Close()
 }

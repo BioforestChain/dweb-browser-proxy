@@ -65,7 +65,6 @@ func (s *Signal) Emit(req interface{}, ipc IPC) {
 
 func (s *Signal) emit(req interface{}, ipc IPC) {
 	for _, ob := range s.observers {
-		//ob(req, ipc)
 		go func(observer Observer) {
 			observer(req, ipc)
 		}(ob)

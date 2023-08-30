@@ -15,6 +15,7 @@ func New() *Controller {
 }
 
 func (c *Controller) Hello(ctx context.Context, req *v1.Req) (res *v1.Res, err error) {
+	g.RequestFromCtx(ctx).Response.Header().Set("Content-Type", "application/json")
 	g.RequestFromCtx(ctx).Response.Writeln("Hello World!")
 	return
 }

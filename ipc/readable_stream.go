@@ -26,7 +26,7 @@ type ReadableStream struct {
 	highWaterMark uint64 // default 1
 	readerLocked  bool
 	mu            sync.Mutex
-	onStart       Hook // onStart使用不当会造成goroutine泄露，因为没有退出机制
+	onStart       Hook // 使用onStart要自行实现退出机制，否则会出现goroutine泄露，
 	onPull        Hook // controller.enqueue(xx) 或 reader.read()时，都会触发执行
 	onCancel      func()
 	Controller    *ReadableStreamDefaultController

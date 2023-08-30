@@ -43,11 +43,11 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound message.
-	send chan []byte
+	//send chan []byte
 
 	ipc ipc.IPC
 
-	proxyStream *ipc.ReadableStream
+	inputStream *ipc.ReadableStream
 
 	closed bool
 
@@ -75,14 +75,15 @@ func (c *Client) readPump() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
+			log.Println("ws readPump err: ", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
 
-		if err := c.proxyStream.Enqueue(message); err != nil {
-			log.Println(err)
+		if err := c.inputStream.Enqueue(message); err != nil {
+			log.Println("inputStream Enqueue err: ", err)
 		}
 
 		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
@@ -102,14 +103,13 @@ func (c *Client) writePump() {
 		c.Close()
 	}()
 
-	reader := c.ipc.GetStreamReader()
+	reader := c.ipc.GetOutputStreamReader()
 
 	go func() {
 		for {
 			<-ticker.C
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				log.Println(err)
 				reader.Cancel()
 				return
 			}
@@ -129,16 +129,18 @@ func (c *Client) writePump() {
 		if err != nil {
 			return
 		}
+
 		_, _ = w.Write(message.Value)
 
 		// Add queued messages to the current websocket message.
-		n := len(c.send)
-		for i := 0; i < n; i++ {
-			_, _ = w.Write(newline)
-			_, _ = w.Write(<-c.send)
-		}
+		//n := len(c.send)
+		//for i := 0; i < n; i++ {
+		//	_, _ = w.Write(newline)
+		//	_, _ = w.Write(<-c.send)
+		//}
 
 		if err := w.Close(); err != nil {
+			log.Println("writePump close: ", err)
 			return
 		}
 	}
@@ -158,7 +160,7 @@ func (c *Client) Close() {
 	c.closed = true
 
 	c.ipc.Close()
-	c.proxyStream.Controller.Close()
+	c.inputStream.Controller.Close()
 	_ = c.conn.Close()
 }
 
@@ -178,12 +180,12 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	client := &Client{
 		//ID:          "test", // TODO 设备id
-		ID:          r.URL.Query().Get("clientID"), // TODO 设备id
-		hub:         hub,
-		conn:        conn,
-		send:        make(chan []byte, 256),
+		ID:   r.URL.Query().Get("clientID"), // TODO 设备id
+		hub:  hub,
+		conn: conn,
+		//send:        make(chan []byte, 256),
 		ipc:         clientIPC,
-		proxyStream: ipc.NewReadableStream(),
+		inputStream: ipc.NewReadableStream(),
 	}
 
 	client.hub.register <- client
@@ -194,8 +196,8 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer client.Close()
-		if err := clientIPC.BindIncomeStream(client.proxyStream); err != nil {
-			log.Println(err)
+		if err := clientIPC.BindInputStream(client.inputStream); err != nil {
+			log.Println("clientIPC.BindInputStream: ", err)
 		}
 	}()
 }
