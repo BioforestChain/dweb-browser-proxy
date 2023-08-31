@@ -7,7 +7,6 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/golang-jwt/jwt/v4"
 	"log"
-	"net/http"
 	"proxyServer/internal/consts"
 	"proxyServer/internal/model/entity"
 	"proxyServer/internal/packed"
@@ -20,23 +19,8 @@ func keyFunc(_ *jwt.Token) (i interface{}, err error) {
 	return mySecret, nil
 }
 
-func (s *sMiddleware) Auth(r *ghttp.Request) {
-	var (
-		jwtKey      = consts.JwtKey
-		tokenString = r.Header.Get("Authorization")
-	)
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil || !token.Valid {
-		r.Response.WriteStatus(http.StatusForbidden)
-		r.Exit()
-	}
-	r.Middleware.Next()
-}
-
 // JWTAuthMiddleware 基于JWT的认证中间件
-func JWTAuthMiddleware(r *ghttp.Request) {
+func JWTAuth(r *ghttp.Request) {
 	s := new(sMiddleware)
 	// 客户端携带Token有三种方式 1.放在请求头 2.放在请求体 3.放在URI
 	token := r.Header.Get("Authorization") // 可以获取路径中的 name 参数

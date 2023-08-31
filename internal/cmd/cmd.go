@@ -83,7 +83,7 @@ var (
 						ping.New(),
 						auth.New(),
 					)
-					group.Middleware(middleware.JWTAuthMiddleware)
+					group.Middleware(middleware.JWTAuth)
 					//group.Middleware(service.Middleware().Auth)
 					group.Bind(
 						user.New(),

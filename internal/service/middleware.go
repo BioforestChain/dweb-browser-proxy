@@ -13,7 +13,6 @@ import (
 
 type (
 	IMiddleware interface {
-		Auth(r *ghttp.Request)
 		GenToken(userID uint32) (string, error)
 		ParseToken(tokenString string) (*entity.MyClaims, error)
 		RefreshToken(aToken, rToken string) (newAToken, newRToken string, err error)

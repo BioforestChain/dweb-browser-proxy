@@ -5,3 +5,8 @@ const (
 	JwtTTL       = 3 * 24                             // jwt过期时间
 	CtxUserIDKey = "userID"
 )
+
+type User struct {
+	UserID uint32 `db:"user_id"`
+	Token  string
+}
