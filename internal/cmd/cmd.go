@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -18,8 +16,6 @@ import (
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
-	"proxyServer/internal/model"
-	"proxyServer/internal/service"
 	"proxyServer/ipc"
 	"strings"
 )
