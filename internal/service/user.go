@@ -7,21 +7,28 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 type (
 	IUser interface {
-		Create(ctx context.Context, in model.UserCreateInput) (out *v1.ClientRegRes, err error)
-		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
-		GetUserList(ctx context.Context, in model.UserQueryInput) (out []*do.User, total int, err error)
 		IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool
-		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (out *v1.ClientQueryRes, err error)
+		Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
+		InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error)
+		GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error)
+		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error)
 		GenerateMD5ByDeviceIdentification(identification string) (string, error)
 		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)
+		GetUserId(ctx context.Context, Name string) (int, error)
+		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)
+		IsDomainAvailable(ctx context.Context, domain string) (bool, error)
+		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
 	}
 )
 
@@ -30,7 +37,6 @@ var (
 )
 
 func User() IUser {
-
 	if localUser == nil {
 		panic("implement not found for interface IUser, forgot register?")
 	}

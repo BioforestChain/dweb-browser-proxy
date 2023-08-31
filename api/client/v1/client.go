@@ -57,3 +57,12 @@ type ClientQueryListRes struct {
 	Total    int        `json:"total"`     // 数据总数
 	LastPage int        `json:"last_page"` // 最后一页
 }
+
+type ClientGenTokenReq struct {
+	g.Meta `path:"/user/client-token" tags:"ClientTokenService" method:"get" summary:"Get client token"`
+}
+type ClientUserTokenDataRes struct {
+	UserID  uint32 `json:"user_id"`
+	Token   string `json:"token"`
+	NowTime int    `json:"now_time"`
+}

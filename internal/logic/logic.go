@@ -5,5 +5,7 @@
 package logic
 
 import (
+	_ "proxyServer/internal/logic/auth"
+	_ "proxyServer/internal/logic/middleware"
 	_ "proxyServer/internal/logic/user"
 )

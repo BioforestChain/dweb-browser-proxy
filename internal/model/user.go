@@ -46,3 +46,12 @@ type AppQueryInput struct {
 type CheckUrlInput struct {
 	Host string
 }
+
+type DataToDevice struct {
+	UserId interface{} // 用户id
+	//Name           interface{} // 名称
+	SrcIdentification interface{} // 源设备标识
+	Identification    interface{} // md5后设备标识
+	Remark            interface{} // 备注信息
+	Timestamp         interface{} // 时间戳
+}
