@@ -12,8 +12,10 @@ import (
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/api/ws"
 	"proxyServer/internal/consts"
-	"proxyServer/internal/controller/hello"
+	"proxyServer/internal/controller/auth"
+	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/user"
+	"proxyServer/internal/logic/middleware"
 	"proxyServer/ipc"
 	"strings"
 )
@@ -63,7 +65,7 @@ var (
 				req.Host = r.GetHost()
 				//TODO 暂定用 query 参数传递
 				req.ClientID = r.Get("clientID").String()
-				res, err = Proxy2Ipc(r.Context(), hub, req)
+				res, err = Proxy2Ipc(ctx, hub, req)
 				if err != nil {
 					g.Log().Warning(ctx, "Proxy2Ipc err :", err)
 				}
@@ -71,23 +73,25 @@ var (
 			})
 
 			s.Group("/", func(group *ghttp.RouterGroup) {
-
 				group.Middleware(
 					ghttp.MiddlewareHandlerResponse,
 					ghttp.MiddlewareCORS,
+					MiddlewareErrorHandler,
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
+					group.Bind(
+						ping.New(),
+						auth.New(),
+					)
+					group.Middleware(middleware.JWTAuth)
 					//group.Middleware(service.Middleware().Auth)
 					group.Bind(
 						user.New(),
-						hello.New(),
 					)
 				})
 				s.BindHandler("/ws", func(r *ghttp.Request) {
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
-
-				//group.Middleware(MiddlewareAuth, MiddlewareErrorHandler)
 
 				// Special handler that needs authentication.
 				//group.Group("/", func(group *ghttp.RouterGroup) {
@@ -194,6 +198,5 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		return res, err
 	}
 	res.Ipc = string(resStr)
-	//log.Println("proxy res: ", res)
 	return res, err
 }

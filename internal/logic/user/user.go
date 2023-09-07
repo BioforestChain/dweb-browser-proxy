@@ -25,6 +25,7 @@ func init() {
 func New() service.IUser {
 	return &sUser{}
 }
+
 func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
 	count, err := dao.App.Ctx(ctx).Fields("id").Where(do.App{
 		Domain: in.Host,
@@ -74,7 +75,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 			var (
 				result  sql.Result
 				err     error
-				reqData dataToDevice
+				reqData model.DataToDevice
 			)
 			reqData.Identification = md5DeviceIdentification
 			reqData.SrcIdentification = in.Identification
@@ -111,16 +112,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		})
 }
 
-type dataToDevice struct {
-	UserId interface{} // 用户id
-	//Name           interface{} // 名称
-	SrcIdentification interface{} // 源设备标识
-	Identification    interface{} // md5后设备标识
-	Remark            interface{} // 备注信息
-	Timestamp         interface{} // 时间戳
-}
-
-func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData dataToDevice) (result sql.Result, err error) {
+func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error) {
 	result, err = g.Model("device").TX(tx).Data(do.Device{
 		UserId:            reqData.UserId,
 		Identification:    reqData.Identification,
