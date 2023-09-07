@@ -4,10 +4,24 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"proxyServer/ipc/helper"
 	"testing"
 	"time"
 )
+
+func TestReadableStreamIPC_NewReadableStreamIPCWithDefaultInputStream(t *testing.T) {
+	readableStreamIpc := NewReadableStreamIPCWithDefaultInputStream(CLIENT, SupportProtocol{Raw: true})
+	go func() {
+		readableStreamIpc.ReadOutputStream(func(data []byte) {
+			fmt.Println("data: ", string(data))
+		})
+	}()
+
+	req := request()
+
+	_ = readableStreamIpc.Enqueue(req)
+}
 
 func TestReadableStreamIPC_postMessage(t *testing.T) {
 	t.Run("request with empty body", func(t *testing.T) {
@@ -196,4 +210,26 @@ func Test_readInputStream(t *testing.T) {
 			t.Fatal("readInputStream failed")
 		}
 	})
+}
+
+func request() []byte {
+	data := []byte("hi")
+
+	req := FromRequest(
+		1,
+		NewReadableStreamIPC(CLIENT, SupportProtocol{}),
+		"https://www.example.com/search",
+		RequestArgs{
+			Method: "POST",
+			Body:   data,
+			Header: NewHeaderWithExtra(map[string]string{"Content-Type": "application/json"}),
+		},
+	)
+
+	reqMarshal, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+
+	return reqMarshal
 }

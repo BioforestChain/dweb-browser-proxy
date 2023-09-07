@@ -32,6 +32,7 @@ func GetBodySize(header []byte) int {
 	return U8aToU32(header)
 }
 
+// FormatIPCData ipc数据格式为：前缀4字节表示消息大小，后缀字节表示消息内容
 func FormatIPCData(data []byte) []byte {
 	return u32To8Concat(data)
 }

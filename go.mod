@@ -6,6 +6,7 @@ require (
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.5.1
 	github.com/gogf/gf/v2 v2.5.1
 	github.com/gorilla/websocket v1.5.0
+	github.com/json-iterator/go v1.1.12
 )
 
 require (
@@ -21,6 +22,8 @@ require (
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	go.opentelemetry.io/otel v1.7.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.7.0 // indirect

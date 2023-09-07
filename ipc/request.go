@@ -36,24 +36,27 @@ func NewRequest(id uint64, url string, method METHOD, header Header, body BodyIn
 }
 
 func (req *Request) GetReqMessage() *ReqMessage {
-	if req.reqMessage == nil {
-		var metaBody *MetaBody
-		if req.Body != nil {
-			switch v := req.Body.(type) {
-			case *Body:
+	if req.reqMessage != nil {
+		return req.reqMessage
+	}
+
+	var metaBody *MetaBody
+	if req.Body != nil {
+		switch v := req.Body.(type) {
+		case *Body:
+			metaBody = v.metaBody
+		case *BodySender:
+			if v != nil {
 				metaBody = v.metaBody
-			case *BodySender:
-				if v != nil {
-					metaBody = v.metaBody
-				}
-			case *BodyReceiver:
-				if v != nil {
-					metaBody = v.metaBody
-				}
+			}
+		case *BodyReceiver:
+			if v != nil {
+				metaBody = v.metaBody
 			}
 		}
-		req.reqMessage = NewReqMessage(req.ID, req.Method, req.URL, req.Header.toJSON(), metaBody)
 	}
+	req.reqMessage = NewReqMessage(req.ID, req.Method, req.URL, req.Header.toJSON(), metaBody)
+
 	return req.reqMessage
 }
 

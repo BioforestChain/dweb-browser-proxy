@@ -95,7 +95,7 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 	go func() {
 		// 读取内部流数据，然后response
-		serverIPC.ReadFromOutputStream(func(data []byte) {
+		serverIPC.ReadOutputStream(func(data []byte) {
 			if err := ipcConn.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
 				log.Println("res msg err: ", err)
 				panic(err)

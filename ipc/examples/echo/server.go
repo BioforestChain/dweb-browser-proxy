@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"proxyServer/ipc"
+	"time"
 )
 
 func main() {
@@ -24,14 +25,12 @@ func main() {
 			continue
 		}
 
-		ipcConn := NewIPCConn(conn)
-
-		go handleConnection(ipcConn)
+		go handleConnection(conn)
 	}
 }
 
-func handleConnection(ipcConn *IPCConn) {
-	conn := ipcConn.conn
+func handleConnection(conn net.Conn) {
+	ipcConn := NewIPCConn(conn)
 
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
@@ -61,7 +60,7 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 		request := req.(*ipc.Request)
 		if request.URL == "https://www.example.com/search" && request.Method == ipc.POST {
 			body := request.Body.GetMetaBody().Data
-			log.Println("onRequest: ", request.URL, string(body), ic)
+			log.Println("onRequest: ", time.Now(), request.ID, request.URL, string(body))
 
 			// 处理request
 
@@ -71,25 +70,23 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 		}
 	})
 
-	inputStream := ipc.NewReadableStream()
-
 	ipcConn := &IPCConn{
 		ipc:         serverIPC,
-		inputStream: inputStream,
+		inputStream: ipc.NewReadableStream(),
 		conn:        conn,
 	}
 
 	go func() {
 		defer ipcConn.Close()
 		// 读取inputStream数据并emit消息（接收消息并处理，然后把结果发送至输出流）
-		if err := serverIPC.BindInputStream(inputStream); err != nil {
+		if err := serverIPC.BindInputStream(ipcConn.inputStream); err != nil {
 			panic(err)
 		}
 	}()
 
 	go func() {
 		// 读取输出流数据，然后response
-		serverIPC.ReadFromOutputStream(func(data []byte) {
+		serverIPC.ReadOutputStream(func(data []byte) {
 			if _, err := ipcConn.conn.Write(data); err != nil {
 				panic(err)
 			}

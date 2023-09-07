@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"proxyServer/ipc/helper"
 )
 
@@ -13,8 +14,20 @@ type ReadableStreamIPC struct {
 	*BaseIPC
 	role            ROLE
 	supportProtocol SupportProtocol
-	inputStream     *ReadableStream // 输入流，需通过BindInputStream实例化
-	outputStream    *ReadableStream // 输出流 TODO 需要考虑并发使用问题
+	inputStream     *ReadableStream // 输入流
+	outputStream    *ReadableStream // 输出流
+}
+
+func NewReadableStreamIPCWithDefaultInputStream(role ROLE, proto SupportProtocol) *ReadableStreamIPC {
+	ipc := NewReadableStreamIPC(role, proto)
+
+	ipc.inputStream = NewReadableStream()
+	go func() {
+		if err := ipc.bindInputStream(); err != nil {
+			log.Println("ipc BindInputStream: ", err)
+		}
+	}()
+	return ipc
 }
 
 func NewReadableStreamIPC(role ROLE, proto SupportProtocol) *ReadableStreamIPC {
@@ -45,6 +58,10 @@ func (rsi *ReadableStreamIPC) BindInputStream(inputStream *ReadableStream) (err 
 	}
 	rsi.inputStream = inputStream
 
+	return rsi.bindInputStream()
+}
+
+func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
 	for data := range readInputStream(rsi.inputStream) {
 		if len(data) == 4 || len(data) == 5 {
 			switch {
@@ -116,8 +133,14 @@ func (rsi *ReadableStreamIPC) postMessage(ctx context.Context, msg interface{}) 
 	return
 }
 
-// ReadFromOutputStream 从输出流读取数据
-func (rsi *ReadableStreamIPC) ReadFromOutputStream(cb func([]byte)) {
+// Enqueue write data to input stream
+func (rsi *ReadableStreamIPC) Enqueue(data []byte) error {
+	ipcData := helper.FormatIPCData(data)
+	return rsi.inputStream.Enqueue(ipcData)
+}
+
+// ReadOutputStream 从输出流读取数据
+func (rsi *ReadableStreamIPC) ReadOutputStream(cb func([]byte)) {
 	reader := rsi.outputStream.GetReader()
 	for {
 		d, err := reader.Read()
@@ -157,8 +180,9 @@ func readInputStream(stream *ReadableStream) <-chan []byte {
 	go func() {
 		defer close(dataChan)
 		b := newBinaryStreamRead(stream)
+
 		for {
-			// TODO 如果传输的数据未按 header|body格式传输，则读取的数据会出问题
+			// TODO 如果传输的数据未按 header|body格式传输，则bodySize一般会变得很大，导致一直阻塞读取
 			// 需要校验格式
 			header, err := b.read(4)
 			if err != nil {

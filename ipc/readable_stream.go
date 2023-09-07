@@ -26,7 +26,7 @@ type ReadableStream struct {
 	highWaterMark uint64 // default 1
 	readerLocked  bool
 	mu            sync.Mutex
-	onStart       Hook // 使用onStart要自行实现退出机制，否则会出现goroutine泄露，
+	onStart       Hook // 使用onStart要自行实现退出机制，否则可能会出现goroutine泄露，
 	onPull        Hook // controller.enqueue(xx) 或 reader.read()时，都会触发执行
 	onCancel      func()
 	Controller    *ReadableStreamDefaultController
@@ -48,7 +48,7 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	}
 
 	if stream.highWaterMark == 0 {
-		stream.highWaterMark = 1
+		stream.highWaterMark = 10
 	}
 
 	stream.dataChan = make(chan []byte, stream.highWaterMark)

@@ -101,7 +101,7 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 
 	go func() {
 		// 读取输出流数据，然后response
-		serverIPC.ReadFromOutputStream(func(data []byte) {
+		serverIPC.ReadOutputStream(func(data []byte) {
 			if _, err := ipcConn.conn.Write(data); err != nil {
 				panic(err)
 			}

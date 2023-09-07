@@ -179,7 +179,6 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	})
 
 	client := &Client{
-		//ID:          "test", // TODO 设备id
 		ID:   r.URL.Query().Get("clientID"), // TODO 设备id
 		hub:  hub,
 		conn: conn,
