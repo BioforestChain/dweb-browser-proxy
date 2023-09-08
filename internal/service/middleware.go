@@ -13,9 +13,9 @@ import (
 
 type (
 	IMiddleware interface {
-		GenToken(userID uint32) (string, error)
+		GenToken(userID uint32) (string, string, int64, error)
 		ParseToken(tokenString string) (*entity.MyClaims, error)
-		RefreshToken(aToken, rToken string) (newAToken, newRToken string, err error)
+		RefreshToken(accessToken, refreshToken string) (string, string, int64, uint32, error)
 		Response(r *ghttp.Request)
 	}
 )

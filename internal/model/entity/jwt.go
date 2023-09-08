@@ -7,5 +7,7 @@ import "github.com/golang-jwt/jwt/v4"
 // 如果想要保存更多信息，都可以添加到这个结构体中
 type MyClaims struct {
 	UserID uint32 `json:"user_id"`
+
 	jwt.RegisteredClaims
+	//jwt.StandardClaims
 }

@@ -12,7 +12,7 @@ type ClientRegReq struct {
 	g.Meta               `path:"/user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
 	Name                 string `v:"required"` //用户名，昵称？
 	PublicKey            string `v:"required"` //公钥
-	DeviceIdentification string `v:"required"` //暂定入参imei码，待生成设备标识
+	DeviceIdentification string `v:""`         //暂定入参imei码，待生成设备标识
 	Remark               string
 }
 
@@ -22,7 +22,8 @@ type ClientDomainRegReq struct {
 	UserName             string `v:"required"`        //用户名称
 	AppName              string `v:"required"`        //app名称
 	AppIdentification    string `v:"required"`        //app唯一标识
-	DeviceIdentification string `v:"required"`        //设备唯一标识
+	DeviceIdentification string `v:""`                //设备唯一标识
+	PublicKey            string `v:"required"`        //公钥
 	Domain               string `v:"required|domain"` //域名
 	//Identification string `v:"required"`        // 通过用户名，查到user_id，数据插入到app表里
 	Remark string
@@ -30,6 +31,7 @@ type ClientDomainRegReq struct {
 
 type ClientRegRes struct {
 	DeviceIdentification string `json:"device_identification"` //设备标识，也就是clientID
+	UserId               uint32 `json:"user_id"`               //用户id
 }
 
 type ClientQueryReq struct {
@@ -58,11 +60,15 @@ type ClientQueryListRes struct {
 	LastPage int        `json:"last_page"` // 最后一页
 }
 
-type ClientGenTokenReq struct {
-	g.Meta `path:"/user/client-token" tags:"ClientTokenService" method:"get" summary:"Get client token"`
+type ClientRefreshTokenReq struct {
+	g.Meta       `path:"/user/client-refresh-token" tags:"ClientRefreshTokenService" method:"get" summary:"Get client refresh token"`
+	AccessToken  string `v:"required",json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 type ClientUserTokenDataRes struct {
-	UserID  uint32 `json:"user_id"`
-	Token   string `json:"token"`
-	NowTime int    `json:"now_time"`
+	UserID       uint32 `json:"user_id"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	NowTime      string `json:"now_time"`
+	ExpireTime   string `json:"expire_time"`
 }

@@ -16,11 +16,11 @@ func New() *Controller {
 	return &Controller{}
 }
 
-func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *v1.ClientRegRes, err error) {
+func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *v1.ClientUserTokenDataRes, err error) {
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("clientReg Validator", err)
 	}
-	out, err := service.User().Create(ctx, model.UserCreateInput{
+	newOne, err := service.User().Create(ctx, model.UserCreateInput{
 		Name:           req.Name,
 		PublicKey:      req.PublicKey,
 		Identification: req.DeviceIdentification,
@@ -29,8 +29,14 @@ func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *
 	if err != nil {
 		return
 	}
-	return &v1.ClientRegRes{
-		out.DeviceIdentification,
+	//jwt
+	out := service.Auth().GenToken(ctx, newOne.UserId)
+	return &v1.ClientUserTokenDataRes{
+		newOne.UserId,
+		out.Token,
+		out.RefreshToken,
+		out.NowTime,
+		out.ExpireTime,
 	}, err
 }
 
@@ -52,6 +58,7 @@ func (c *Controller) ClientDomainReg(ctx context.Context, req *v1.ClientDomainRe
 		UserName:             req.UserName,
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
+		PublicKey:            req.PublicKey,
 		AppName:              req.AppName,
 		Domain:               req.Domain,
 		Remark:               req.Remark,

@@ -25,6 +25,7 @@ type UserDomainCreateInput struct {
 	AppName              string
 	AppIdentification    string
 	DeviceIdentification string
+	PublicKey            string
 	Domain               string
 	Timestamp            string
 	Remark               string
@@ -48,7 +49,7 @@ type CheckUrlInput struct {
 }
 
 type DataToDevice struct {
-	UserId interface{} // 用户id
+	UserId uint32 // 用户id
 	//Name           interface{} // 名称
 	SrcIdentification interface{} // 源设备标识
 	Identification    interface{} // md5后设备标识
