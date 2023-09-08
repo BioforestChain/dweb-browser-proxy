@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var mySecret = []byte("jwt")
+var mySecret = []byte(consts.JwtSecret)
 
 func keyFunc(_ *jwt.Token) (i interface{}, err error) {
 	return mySecret, nil
@@ -55,30 +55,32 @@ func JWTAuth(r *ghttp.Request) {
 }
 
 func (s *sMiddleware) GenToken(userID uint32) (string, string, int64, error) {
-	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_expire")
-
+	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_token_expire")
+	JwtRefreshTokenExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_refresh_token_expire")
 	jwtExpireInt64 := jwtExpire.Int64()
+	JwtRefreshTokenExpireInt64 := JwtRefreshTokenExpire.Int64()
+
 	c := entity.MyClaims{
 		userID,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(jwtExpireInt64))), // 过期时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                                  // 签发时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                  // 生效时间
-			Issuer:    "jwt",                                                                           // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(jwtExpireInt64))), // 过期时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                // 签发时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                // 生效时间
+			Issuer:    "jwt",                                                                         // 签发人
 		},
 	}
 	// 使用指定的签名方法创建签名对象
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(mySecret)
 
-	log.Println("过期时间:", jwt.NewNumericDate(time.Now().Add(time.Second*time.Duration(jwtExpireInt64))))
+	log.Println("AccessToken ExpiresAt:", jwt.NewNumericDate(time.Now().Add(time.Hour*time.Duration(jwtExpireInt64))))
 	// 使用指定的secret签名并获得完整的编码后的字符串token
 	rc := entity.MyClaims{
 		userID,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(jwtExpireInt64))), // 过期时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                                  // 签发时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                  // 生效时间
-			Issuer:    "jwt",                                                                           // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(JwtRefreshTokenExpireInt64))), // 过期时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                            // 签发时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                            // 生效时间
+			Issuer:    "jwt",                                                                                     // 签发人
 		},
 	}
 	refreshToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, rc).SignedString(mySecret)
