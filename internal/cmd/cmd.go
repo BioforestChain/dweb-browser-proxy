@@ -15,6 +15,7 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/ping"
+	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/ipc"
@@ -35,11 +36,11 @@ func MiddlewareAuth(r *ghttp.Request) {
 	}
 }
 
-func MiddlewareLimitHandler(limit *rate.Limiter) func(r *ghttp.Request) {
+func MiddlewareLimitHandler(limit *rate.Limiter, clientId string) func(r *ghttp.Request) {
 	return func(r *ghttp.Request) {
 		r.Middleware.Next()
 		// 请求限制器,如果限制成功则处理请求
-		if !limit.Allow() {
+		if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
 			r.Response.WriteStatus(http.StatusTooManyRequests)
 			r.Response.ClearBuffer()
 			r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
@@ -73,7 +74,7 @@ var (
 				limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
 				limitNumDur := limitNum.Duration() * time.Millisecond
 				burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
-				_ = rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
+				limit := rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
 
 				group.Middleware(
 					//MiddlewareLimitHandler(limit),
@@ -92,6 +93,9 @@ var (
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("clientID").String()
+					group.Middleware(
+						MiddlewareLimitHandler(limit, req.ClientID),
+					)
 					res, err = Proxy2Ipc(ctx, hub, req)
 					if err != nil {
 						g.Log().Warning(ctx, "Proxy2Ipc err :", err)
@@ -109,8 +113,10 @@ var (
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
+						//排除不受JWT认证的路由
 						ping.New(),
 						auth.New(),
+						pre_user.New(),
 					)
 					group.Middleware(middleware.JWTAuth)
 					//group.Middleware(service.Middleware().Auth)

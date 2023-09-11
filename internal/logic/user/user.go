@@ -44,14 +44,11 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		available bool
 		getUserId uint32
 	)
-	available, err = s.IsIdentificationAvailable(ctx, md5DeviceIdentification)
+	availableIsIdentification, err := s.IsIdentificationAvailable(ctx, md5DeviceIdentification)
 	if err != nil {
 		return nil, err
 	}
-	if !available {
 
-		//return nil, gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
-	}
 	//TODO 暂定 没有用户名用设备标识填充
 	if in.Name == "" {
 		in.Name = md5DeviceIdentification
@@ -81,7 +78,10 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		reqData.Remark = in.Remark
 		if getUserId > 0 {
 			reqData.UserId = getUserId
-			result, err = s.InsertDevice(ctx, tx, reqData)
+			if availableIsIdentification {
+				result, err = s.InsertDevice(ctx, tx, reqData)
+				//return nil, gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
+			}
 			if err != nil {
 				return err
 			}
@@ -101,7 +101,9 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 				return err
 			}
 			reqData.UserId = uint32(getUserId)
-			result, err = s.InsertDevice(ctx, tx, reqData)
+			if availableIsIdentification {
+				result, err = s.InsertDevice(ctx, tx, reqData)
+			}
 			if err != nil {
 				return err
 			}

@@ -9,7 +9,7 @@ import (
 // 1. 用户注册
 // 1.1 设备表，一个用户可以有多个设备(暂定)
 type ClientRegReq struct {
-	g.Meta               `path:"/user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
+	g.Meta               `path:"/pre-user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
 	Name                 string `v:"required"` //用户名，昵称？
 	PublicKey            string `v:"required"` //公钥
 	DeviceIdentification string `v:""`         //暂定入参imei码，待生成设备标识

@@ -16,30 +16,6 @@ func New() *Controller {
 	return &Controller{}
 }
 
-func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *v1.ClientUserTokenDataRes, err error) {
-	if err := g.Validator().Data(req).Run(ctx); err != nil {
-		fmt.Println("clientReg Validator", err)
-	}
-	newOne, err := service.User().Create(ctx, model.UserCreateInput{
-		Name:           req.Name,
-		PublicKey:      req.PublicKey,
-		Identification: req.DeviceIdentification,
-		Remark:         req.Remark,
-	})
-	if err != nil {
-		return
-	}
-	//jwt
-	out := service.Auth().GenToken(ctx, newOne.UserId)
-	return &v1.ClientUserTokenDataRes{
-		newOne.UserId,
-		out.Token,
-		out.RefreshToken,
-		out.NowTime,
-		out.ExpireTime,
-	}, err
-}
-
 // ClientDomainReg
 //
 //	@Description: 域名注册
@@ -111,8 +87,11 @@ func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (r
 	if err != nil {
 		return
 	}
-	return &v1.ClientQueryRes{
-		data.Domain,
-		data.Identification,
-	}, err
+	if data != nil {
+		res = new(v1.ClientQueryRes)
+		res.Domain = data.Domain
+		res.Identification = data.Identification
+		return res, err
+	}
+	return
 }

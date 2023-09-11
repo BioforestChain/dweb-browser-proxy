@@ -22,36 +22,31 @@ func keyFunc(_ *jwt.Token) (i interface{}, err error) {
 // JWTAuthMiddleware 基于JWT的认证中间件
 func JWTAuth(r *ghttp.Request) {
 	s := new(sMiddleware)
-	//排除不受JWT认证的路由
-	if r.URL.Path == consts.RouteProxyUserClientReg {
-		r.Middleware.Next()
-	} else {
-		// 客户端携带Token 放在请求头
-		token := r.Header.Get("Authorization")
-		if len(token) == 0 {
-			r.Response.WriteJson(Response{
-				Code:    consts.TokenCannotBeNull,
-				Message: packed.Err.GetErrorMessage(consts.TokenCannotBeNull),
-				Data:    nil,
-			})
-			r.Exit()
-			return
-		}
-		mc, err := s.ParseToken(token)
-		log.Println("jwtAccessToken err is ", err)
-		if err != nil {
-			r.Response.WriteJson(Response{
-				Code:    consts.TokenIsInvalid,
-				Message: packed.Err.GetErrorMessage(consts.TokenIsInvalid),
-				Data:    nil,
-			})
-			r.Exit()
-			return
-		}
-		// 将当前请求的userid信息保存到请求的上下文c上
-		r.Header.Set(consts.CtxUserIDKey, string(mc.UserID))
-		r.Middleware.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
+	// 客户端携带Token 放在请求头
+	token := r.Header.Get("Authorization")
+	if len(token) == 0 {
+		r.Response.WriteJson(Response{
+			Code:    consts.TokenCannotBeNull,
+			Message: packed.Err.GetErrorMessage(consts.TokenCannotBeNull),
+			Data:    nil,
+		})
+		r.Exit()
+		return
 	}
+	mc, err := s.ParseToken(token)
+	log.Println("jwtAccessToken err is ", err)
+	if err != nil {
+		r.Response.WriteJson(Response{
+			Code:    consts.TokenIsInvalid,
+			Message: packed.Err.GetErrorMessage(consts.TokenIsInvalid),
+			Data:    nil,
+		})
+		r.Exit()
+		return
+	}
+	// 将当前请求的userid信息保存到请求的上下文c上
+	r.Header.Set(consts.CtxUserIDKey, string(mc.UserID))
+	r.Middleware.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
 }
 
 func (s *sMiddleware) GenToken(userID uint32) (string, string, int64, error) {
