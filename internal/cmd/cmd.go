@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -36,16 +37,29 @@ func MiddlewareAuth(r *ghttp.Request) {
 	}
 }
 
-func MiddlewareLimitHandler(limit *rate.Limiter, clientId string) func(r *ghttp.Request) {
+func MiddlewareLimitHandlerBak(limit *rate.Limiter, clientId string) func(r *ghttp.Request) {
 	return func(r *ghttp.Request) {
 		r.Middleware.Next()
 		// 请求限制器,如果限制成功则处理请求
+		fmt.Println("sssssssssssss", clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow())
 		if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
 			r.Response.WriteStatus(http.StatusTooManyRequests)
 			r.Response.ClearBuffer()
 			r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
 		}
 	}
+}
+
+func MiddlewareLimitHandler(r *ghttp.Request, limit *rate.Limiter, clientId string) bool {
+	r.Middleware.Next()
+	// 请求限制器,如果限制成功则处理请求
+	if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
+		r.Response.WriteStatus(http.StatusTooManyRequests)
+		r.Response.ClearBuffer()
+		r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
+		return false
+	}
+	return true
 }
 
 func MiddlewareErrorHandler(r *ghttp.Request) {
@@ -80,6 +94,7 @@ var (
 					//MiddlewareLimitHandler(limit),
 					MiddlewareErrorHandler,
 				)
+
 				group.ALL("/*any", func(r *ghttp.Request) {
 					var (
 						req *v1.IpcReq
@@ -93,14 +108,14 @@ var (
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("clientID").String()
-					group.Middleware(
-						MiddlewareLimitHandler(limit, req.ClientID),
-					)
-					res, err = Proxy2Ipc(ctx, hub, req)
-					if err != nil {
-						g.Log().Warning(ctx, "Proxy2Ipc err :", err)
+					rateRes := MiddlewareLimitHandler(r, limit, req.ClientID)
+					if rateRes {
+						res, err = Proxy2Ipc(ctx, hub, req)
+						if err != nil {
+							g.Log().Warning(ctx, "Proxy2Ipc err :", err)
+						}
+						r.Response.Write(res)
 					}
-					r.Response.Write(res)
 				})
 			})
 

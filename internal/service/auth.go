@@ -12,7 +12,7 @@ import (
 
 type (
 	IAuth interface {
-		GenToken(ctx context.Context, UserId uint32) (res *v1.ClientUserTokenDataRes)
+		GenToken(ctx context.Context, UserId uint32, DeviceIdentification string) (res *v1.ClientUserTokenDataRes)
 		RefreshToken(ctx context.Context, req *v1.ClientRefreshTokenReq) (res *v1.ClientUserTokenDataRes)
 	}
 )

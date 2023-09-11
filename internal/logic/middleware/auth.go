@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/golang-jwt/jwt/v4"
 	"log"
+	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
 	"proxyServer/internal/model/entity"
 	"proxyServer/internal/packed"
@@ -49,7 +50,7 @@ func JWTAuth(r *ghttp.Request) {
 	r.Middleware.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
 }
 
-func (s *sMiddleware) GenToken(userID uint32) (string, string, int64, error) {
+func (s *sMiddleware) GenToken(userID uint32, deviceIdentification string) (string, string, int64, error) {
 	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_token_expire")
 	JwtRefreshTokenExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_refresh_token_expire")
 	jwtExpireInt64 := jwtExpire.Int64()
@@ -57,25 +58,27 @@ func (s *sMiddleware) GenToken(userID uint32) (string, string, int64, error) {
 
 	c := entity.MyClaims{
 		userID,
+		deviceIdentification,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(jwtExpireInt64))), // 过期时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                                // 签发时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                // 生效时间
-			Issuer:    "jwt",                                                                         // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(jwtExpireInt64))), // 过期时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                  // 签发时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                  // 生效时间
+			Issuer:    "jwt",                                                                           // 签发人
 		},
 	}
 	// 使用指定的签名方法创建签名对象
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(mySecret)
 
-	log.Println("AccessToken ExpiresAt:", jwt.NewNumericDate(time.Now().Add(time.Hour*time.Duration(jwtExpireInt64))))
+	log.Println("AccessToken ExpiresAt:", jwt.NewNumericDate(time.Now().Add(time.Minute*time.Duration(jwtExpireInt64))))
 	// 使用指定的secret签名并获得完整的编码后的字符串token
 	rc := entity.MyClaims{
 		userID,
+		deviceIdentification,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(JwtRefreshTokenExpireInt64))), // 过期时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                                            // 签发时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                            // 生效时间
-			Issuer:    "jwt",                                                                                     // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(JwtRefreshTokenExpireInt64))), // 过期时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                              // 签发时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                              // 生效时间
+			Issuer:    "jwt",                                                                                       // 签发人
 		},
 	}
 	refreshToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, rc).SignedString(mySecret)
@@ -102,10 +105,11 @@ func (s *sMiddleware) ParseToken(tokenString string) (*entity.MyClaims, error) {
 // 第一步 : 判断 refreshToken 格式对的，没有过期的
 // 第二步 : 判断 accessToken 格式对的，但是是过期的
 // 第三步 : 生成双 token
-func (s *sMiddleware) RefreshToken(accessToken, refreshToken string) (string, string, int64, uint32, error) {
+func (s *sMiddleware) RefreshToken(accessToken, refreshToken string) (*v1.ClientUserRefreshTokenRes, error) {
 	// refresh token无效直接返回
 	if _, err := jwt.Parse(refreshToken, keyFunc); err != nil {
-		return "", "", 0, 0, err
+		//return "", "", 0, 0, err
+		return nil, err
 	}
 
 	// 从旧access token中解析出claims数据
@@ -115,8 +119,13 @@ func (s *sMiddleware) RefreshToken(accessToken, refreshToken string) (string, st
 	v, _ := err.(*jwt.ValidationError)
 	// 当access token是过期错误 并且 refresh token没有过期时就创建一个新的access token
 	if v.Errors == jwt.ValidationErrorExpired {
-		token, refreshToken, expiresAt, _ := s.GenToken(claims.UserID)
-		return token, refreshToken, expiresAt, claims.UserID, nil
+		token, refreshToken, expiresAt, _ := s.GenToken(claims.UserID, claims.DeviceIdentification)
+		return &v1.ClientUserRefreshTokenRes{
+			claims.UserID, claims.DeviceIdentification,
+			token, refreshToken,
+			expiresAt,
+		}, nil
+		//return token, refreshToken, expiresAt, claims.UserID, nil
 	}
-	return "", "", 0, 0, err
+	return nil, err
 }

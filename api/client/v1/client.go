@@ -66,9 +66,18 @@ type ClientRefreshTokenReq struct {
 	RefreshToken string `json:"refresh_token"`
 }
 type ClientUserTokenDataRes struct {
-	UserID       uint32 `json:"user_id"`
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
-	NowTime      string `json:"now_time"`
-	ExpireTime   string `json:"expire_time"`
+	UserID               uint32 `json:"user_id"`
+	DeviceIdentification string `json:"device_identification"`
+	Token                string `json:"token"`
+	RefreshToken         string `json:"refresh_token"`
+	NowTime              string `json:"now_time"`
+	ExpireTime           string `json:"expire_time"`
+}
+
+type ClientUserRefreshTokenRes struct {
+	UserID               uint32 `json:"user_id"`
+	DeviceIdentification string `json:"device_identification"`
+	Token                string `json:"token"`
+	RefreshToken         string `json:"refresh_token"`
+	ExpireTime           int64  `json:"expire_time"`
 }

@@ -53,6 +53,7 @@ func (c *Controller) ClientRefreshToken(ctx context.Context, req *v1.ClientRefre
 
 	return &v1.ClientUserTokenDataRes{
 		out.UserID,
+		out.DeviceIdentification,
 		out.Token,
 		out.RefreshToken,
 		out.NowTime,
