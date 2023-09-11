@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -34,19 +33,6 @@ func MiddlewareAuth(r *ghttp.Request) {
 	} else {
 		r.Response.WriteStatus(http.StatusForbidden)
 
-	}
-}
-
-func MiddlewareLimitHandlerBak(limit *rate.Limiter, clientId string) func(r *ghttp.Request) {
-	return func(r *ghttp.Request) {
-		r.Middleware.Next()
-		// 请求限制器,如果限制成功则处理请求
-		fmt.Println("sssssssssssss", clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow())
-		if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
-			r.Response.WriteStatus(http.StatusTooManyRequests)
-			r.Response.ClearBuffer()
-			r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
-		}
 	}
 }
 
@@ -94,7 +80,6 @@ var (
 					//MiddlewareLimitHandler(limit),
 					MiddlewareErrorHandler,
 				)
-
 				group.ALL("/*any", func(r *ghttp.Request) {
 					var (
 						req *v1.IpcReq
