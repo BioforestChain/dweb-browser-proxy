@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
 	"github.com/gogf/gf/v2/os/gcmd"
+	"golang.org/x/time/rate"
 	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
@@ -14,10 +15,12 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/ping"
+	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/ipc"
 	"strings"
+	"time"
 )
 
 func MiddlewareAuth(r *ghttp.Request) {
@@ -31,6 +34,18 @@ func MiddlewareAuth(r *ghttp.Request) {
 		r.Response.WriteStatus(http.StatusForbidden)
 
 	}
+}
+
+func MiddlewareLimitHandler(r *ghttp.Request, limit *rate.Limiter, clientId string) bool {
+	r.Middleware.Next()
+	// 请求限制器,如果限制成功则处理请求
+	if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
+		r.Response.WriteStatus(http.StatusTooManyRequests)
+		r.Response.ClearBuffer()
+		r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
+		return false
+	}
+	return true
 }
 
 func MiddlewareErrorHandler(r *ghttp.Request) {
@@ -52,27 +67,45 @@ var (
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
-			s.BindHandler("/*any", func(r *ghttp.Request) {
-				var (
-					req *v1.IpcReq
-					res *v1.IpcRes
-					err error
-				)
-				req = &v1.IpcReq{}
-				req.Header = strings.Join(r.Header["Content-Type"], "")
-				req.Method = r.Method
-				req.URL = r.GetUrl()
-				req.Host = r.GetHost()
-				//TODO 暂定用 query 参数传递
-				req.ClientID = r.Get("clientID").String()
-				res, err = Proxy2Ipc(ctx, hub, req)
-				if err != nil {
-					g.Log().Warning(ctx, "Proxy2Ipc err :", err)
-				}
-				r.Response.Write(res)
-			})
 
 			s.Group("/", func(group *ghttp.RouterGroup) {
+
+				// 创建一个每 200 毫秒限1个请求的限制器
+				limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
+				limitNumDur := limitNum.Duration() * time.Millisecond
+				burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
+				limit := rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
+
+				group.Middleware(
+					//MiddlewareLimitHandler(limit),
+					MiddlewareErrorHandler,
+				)
+				group.ALL("/*any", func(r *ghttp.Request) {
+					var (
+						req *v1.IpcReq
+						res *v1.IpcRes
+						err error
+					)
+					req = &v1.IpcReq{}
+					req.Header = strings.Join(r.Header["Content-Type"], "")
+					req.Method = r.Method
+					req.URL = r.GetUrl()
+					req.Host = r.GetHost()
+					//TODO 暂定用 query 参数传递
+					req.ClientID = r.Get("clientID").String()
+					rateRes := MiddlewareLimitHandler(r, limit, req.ClientID)
+					if rateRes {
+						res, err = Proxy2Ipc(ctx, hub, req)
+						if err != nil {
+							g.Log().Warning(ctx, "Proxy2Ipc err :", err)
+						}
+						r.Response.Write(res)
+					}
+				})
+			})
+
+			s.Group("/proxy", func(group *ghttp.RouterGroup) {
+
 				group.Middleware(
 					ghttp.MiddlewareHandlerResponse,
 					ghttp.MiddlewareCORS,
@@ -80,8 +113,10 @@ var (
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
+						//排除不受JWT认证的路由
 						ping.New(),
 						auth.New(),
+						pre_user.New(),
 					)
 					group.Middleware(middleware.JWTAuth)
 					//group.Middleware(service.Middleware().Auth)

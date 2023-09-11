@@ -16,24 +16,6 @@ func New() *Controller {
 	return &Controller{}
 }
 
-func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *v1.ClientRegRes, err error) {
-	if err := g.Validator().Data(req).Run(ctx); err != nil {
-		fmt.Println("clientReg Validator", err)
-	}
-	out, err := service.User().Create(ctx, model.UserCreateInput{
-		Name:           req.Name,
-		PublicKey:      req.PublicKey,
-		Identification: req.DeviceIdentification,
-		Remark:         req.Remark,
-	})
-	if err != nil {
-		return
-	}
-	return &v1.ClientRegRes{
-		out.DeviceIdentification,
-	}, err
-}
-
 // ClientDomainReg
 //
 //	@Description: 域名注册
@@ -52,6 +34,7 @@ func (c *Controller) ClientDomainReg(ctx context.Context, req *v1.ClientDomainRe
 		UserName:             req.UserName,
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
+		PublicKey:            req.PublicKey,
 		AppName:              req.AppName,
 		Domain:               req.Domain,
 		Remark:               req.Remark,
@@ -104,8 +87,11 @@ func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (r
 	if err != nil {
 		return
 	}
-	return &v1.ClientQueryRes{
-		data.Domain,
-		data.Identification,
-	}, err
+	if data != nil {
+		res = new(v1.ClientQueryRes)
+		res.Domain = data.Domain
+		res.Identification = data.Identification
+		return res, err
+	}
+	return
 }

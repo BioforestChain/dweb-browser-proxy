@@ -8,6 +8,9 @@ package service
 import (
 	"context"
 	"database/sql"
+	//"github.com/gogf/gf/v2/frame/g"
+
+	//"github.com/gogf/gf/v2/frame/g"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
@@ -25,7 +28,7 @@ type (
 		GenerateMD5ByDeviceIdentification(identification string) (string, error)
 		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)
-		GetUserId(ctx context.Context, Name string) (int, error)
+		GetUserId(ctx context.Context, Name string) (uint32, error)
 		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)
 		IsDomainAvailable(ctx context.Context, domain string) (bool, error)
 		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
