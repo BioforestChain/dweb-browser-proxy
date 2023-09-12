@@ -18,6 +18,7 @@ import (
 	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
+	"proxyServer/internal/packed"
 	"proxyServer/ipc"
 	"strings"
 	"sync"
@@ -26,7 +27,6 @@ import (
 
 func MiddlewareLimitHandler() func(r *ghttp.Request) {
 	s := sync.Map{}
-	//hashMap := make(map[string]*rate.Limiter)
 	return func(r *ghttp.Request) {
 		r.Middleware.Next()
 		clientID := r.Get("clientID").String()
@@ -50,7 +50,6 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 		}
 	}
 }
-
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.Status >= http.StatusInternalServerError {
@@ -67,13 +66,10 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
-
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
-
 			s.Group("/", func(group *ghttp.RouterGroup) {
-
 				group.Middleware(
 					MiddlewareLimitHandler(),
 					MiddlewareErrorHandler,
@@ -98,9 +94,7 @@ var (
 					r.Response.WriteJsonExit(res)
 				})
 			})
-
 			s.Group("/proxy", func(group *ghttp.RouterGroup) {
-
 				group.Middleware(
 					ghttp.MiddlewareHandlerResponse,
 					ghttp.MiddlewareCORS,
@@ -122,7 +116,6 @@ var (
 				s.BindHandler("/ws", func(r *ghttp.Request) {
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
-
 				// Special handler that needs authentication.
 				//group.Group("/", func(group *ghttp.RouterGroup) {
 				//	group.Middleware(service.Middleware().Auth)
@@ -130,7 +123,6 @@ var (
 				//		"/user/profile": user.New().Profile,
 				//	})
 				//})
-
 				//group.Group("/user", func(group *ghttp.RouterGroup) {
 				//	group.GET("/client-list", func(r *ghttp.Request) {
 				//
@@ -144,9 +136,7 @@ var (
 				//		r.Response.Write("drop")
 				//	})
 				//})
-
 			})
-
 			enhanceOpenAPIDoc(s)
 			s.Run()
 			return nil
@@ -158,7 +148,6 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 	openapi := s.GetOpenApi()
 	openapi.Config.CommonResponse = ghttp.DefaultHandlerResponse{}
 	openapi.Config.CommonResponseDataField = `Data`
-
 	// API description.
 	openapi.Info = goai.Info{
 		Title:       consts.OpenAPITitle,
@@ -178,7 +167,6 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@param req
 //	@return res
 //	@return err
-
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middleware.Response, err error) {
 	req = &v1.IpcReq{
 		Host:     req.Host,
@@ -188,7 +176,8 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 		ClientID: req.ClientID,
 	}
 	res = &middleware.Response{}
-	res.Code = http.StatusInternalServerError
+	res.Code = consts.ServiceIsUnavailable
+	res.Message = packed.Err.GetErrorMessage(consts.ServiceIsUnavailable)
 	res.Data = nil
 	// 验证 req.Host 是否存于数据库中
 	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
@@ -198,11 +187,9 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 	//}
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
-		res.Message = "The service is unavailable"
 		return res, nil
 	}
 	clientIpc := client.GetIpc()
-
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
 		Header: map[string]string{"Content-Type": req.Header},
@@ -210,6 +197,7 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
+		res.Code = consts.ClientIpcSendErr
 		res.Message = err.Error()
 		return res, err
 	}
@@ -225,7 +213,8 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 		res.Message = err.Error()
 		return res, err
 	}
-	res.Code = 0
+	res.Code = consts.Success
+	res.Message = packed.Err.GetErrorMessage(consts.Success)
 	res.Data = string(resStr)
 	return res, err
 }
