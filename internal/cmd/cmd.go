@@ -20,39 +20,43 @@ import (
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/ipc"
 	"strings"
+	"sync"
 	"time"
 )
 
-func MiddlewareAuth(r *ghttp.Request) {
-	token := r.Get("token")
-
-	if token.String() == "123456" {
-		//r.Response.Writeln("auth")
-
+func MiddlewareLimitHandler() func(r *ghttp.Request) {
+	s := sync.Map{}
+	//hashMap := make(map[string]*rate.Limiter)
+	return func(r *ghttp.Request) {
 		r.Middleware.Next()
-	} else {
-		r.Response.WriteStatus(http.StatusForbidden)
-
+		clientID := r.Get("clientID").String()
+		v, ok := s.Load(clientID)
+		if !ok {
+			var limit *rate.Limiter
+			// 创建一个每 200 毫秒限1个请求的限制器
+			limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
+			limitNumDur := limitNum.Duration() * time.Millisecond
+			burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
+			limit = rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
+			s.Store(clientID, limit)
+			v = limit
+		}
+		tmp := v.(*rate.Limiter)
+		// 请求限制器,如果限制成功则处理请求
+		if !tmp.Allow() {
+			r.Response.WriteStatus(http.StatusTooManyRequests)
+			r.Response.ClearBuffer()
+			r.Response.Write(middleware.Response{http.StatusTooManyRequests, "The request is too fast, please try again later!", nil})
+		}
 	}
-}
-
-func MiddlewareLimitHandler(r *ghttp.Request, limit *rate.Limiter, clientId string) bool {
-	r.Middleware.Next()
-	// 请求限制器,如果限制成功则处理请求
-	if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
-		r.Response.WriteStatus(http.StatusTooManyRequests)
-		r.Response.ClearBuffer()
-		r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
-		return false
-	}
-	return true
 }
 
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.Status >= http.StatusInternalServerError {
+		r.Response.WriteStatus(http.StatusInternalServerError)
 		r.Response.ClearBuffer()
-		r.Response.Writeln("哎哟我去，服务器居然开小差了，请稍后再试吧！")
+		r.Response.Write(middleware.Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
 	}
 }
 
@@ -70,20 +74,14 @@ var (
 
 			s.Group("/", func(group *ghttp.RouterGroup) {
 
-				// 创建一个每 200 毫秒限1个请求的限制器
-				limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
-				limitNumDur := limitNum.Duration() * time.Millisecond
-				burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
-				limit := rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
-
 				group.Middleware(
-					//MiddlewareLimitHandler(limit),
+					MiddlewareLimitHandler(),
 					MiddlewareErrorHandler,
 				)
 				group.ALL("/*any", func(r *ghttp.Request) {
 					var (
 						req *v1.IpcReq
-						res *v1.IpcRes
+						res *middleware.Response
 						err error
 					)
 					req = &v1.IpcReq{}
@@ -93,14 +91,11 @@ var (
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("clientID").String()
-					rateRes := MiddlewareLimitHandler(r, limit, req.ClientID)
-					if rateRes {
-						res, err = Proxy2Ipc(ctx, hub, req)
-						if err != nil {
-							g.Log().Warning(ctx, "Proxy2Ipc err :", err)
-						}
-						r.Response.Write(res)
+					res, err = Proxy2Ipc(ctx, hub, req)
+					if err != nil {
+						g.Log().Warning(ctx, "Proxy2Ipc err :", err)
 					}
+					r.Response.WriteJsonExit(res)
 				})
 			})
 
@@ -184,7 +179,7 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@return res
 //	@return err
 
-func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes, err error) {
+func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middleware.Response, err error) {
 	req = &v1.IpcReq{
 		Host:     req.Host,
 		Method:   req.Method,
@@ -192,17 +187,18 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		Header:   req.Header,
 		ClientID: req.ClientID,
 	}
-	res = &v1.IpcRes{}
+	res = &middleware.Response{}
+	res.Code = http.StatusInternalServerError
+	res.Data = nil
 	// 验证 req.Host 是否存于数据库中
 	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
 	//if !valCheckUrl {
-	//	//抱歉，您的域名尚未注册
-	//	res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
-	//	return res, nil
+	//res.Message = fmt.Sprintf(`"%s"`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
+	//return res, nil
 	//}
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
-		res.Ipc = "The service is unavailable"
+		res.Message = "The service is unavailable"
 		return res, nil
 	}
 	clientIpc := client.GetIpc()
@@ -212,11 +208,9 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		Header: map[string]string{"Content-Type": req.Header},
 	})
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
-	//fmt.Printf("------------resIpc:%#v\n", resIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
-		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		res.Ipc = err.Error()
+		res.Message = err.Error()
 		return res, err
 	}
 	//todo
@@ -225,13 +219,13 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 	//	fmt.Printf("-----------v:%#v\n", v)
 	//	//w.Header().Set(k, v)
 	//}
-
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {
 		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		res.Ipc = err.Error()
+		res.Message = err.Error()
 		return res, err
 	}
-	res.Ipc = string(resStr)
+	res.Code = 0
+	res.Data = string(resStr)
 	return res, err
 }

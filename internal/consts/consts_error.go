@@ -11,6 +11,8 @@ const (
 	SignValidError        = 1008
 	TimeStampExpired      = 1009
 
+	请求过快 = 1009
+
 	// 参数：1030 ~ 1049
 	ParamsError         = 1030
 	ParamsLenLimitError = 1031
