@@ -2,6 +2,10 @@ package consts
 
 const (
 	Success = 0
+	//
+	DatabaseOperationError = 52
+	RequestErr             = 400
+
 	// 系统：1001 ~ 1029
 	InitRedisErr          = 1001
 	JwtGenerateFailed     = 1002
@@ -30,11 +34,15 @@ const (
 	ServiceIsUnavailable = 3500
 	ClientIpcSendErr     = 3501
 	ReqParamErr          = 521 + iota
+
+	SystemErr = 99999
 )
 
-var ErrorMessageList = func() map[int32]string {
-	return map[int32]string{
-		Success:               "Success",
+var ErrorMessageList = func() map[int]string {
+	return map[int]string{
+		Success:                "Success",
+		DatabaseOperationError: "Database Operation Error!!!",
+
 		InitRedisErr:          "Redis initialization error",
 		JwtGenerateFailed:     "Token generated failure",
 		TokenCannotBeNull:     "Token cannot be empty",
@@ -56,5 +64,7 @@ var ErrorMessageList = func() map[int32]string {
 		ReqParamErr:           "The parameter error",
 		ServiceIsUnavailable:  "The service is unavailable!",
 		ClientIpcSendErr:      "IPC sending exception",
+		SystemErr:             "System exception",
+		RequestErr:            "Request errors",
 	}
 }

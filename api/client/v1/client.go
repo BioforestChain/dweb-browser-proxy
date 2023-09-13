@@ -16,15 +16,15 @@ type ClientRegReq struct {
 	Remark               string
 }
 
-// 1.2  域名注册
-type ClientDomainRegReq struct {
-	g.Meta               `path:"/user/client-domain-reg" tags:"ClientDomainRegService" method:"post" summary:"A new client with domain"`
-	UserName             string `v:"required"`        //用户名称
-	AppName              string `v:"required"`        //app名称
-	AppIdentification    string `v:"required"`        //app唯一标识
-	DeviceIdentification string `v:""`                //设备唯一标识
-	PublicKey            string `v:"required"`        //公钥
-	Domain               string `v:"required|domain"` //域名
+// 1.2  App
+type ClientAppInfoReportReq struct {
+	g.Meta               `path:"/user/client-app-report" tags:"ClientAppInfoReportService" method:"post" summary:"A new client App report"`
+	UserName             string `v:"required"` //用户名称
+	AppName              string `v:"required"` //app名称
+	AppIdentification    string `v:"required"` //app唯一标识
+	DeviceIdentification string `v:""`         //设备唯一标识
+	PublicKey            string `v:"required"` //公钥
+	//Domain               string `v:"required|domain"` //域名
 	//Identification string `v:"required"`        // 通过用户名，查到user_id，数据插入到app表里
 	Remark string
 }
@@ -53,6 +53,11 @@ type ClientQueryRes struct {
 	Domain         string `json:"domain"`             // 域名
 	Identification string `json:"app_identification"` // app唯一标识
 }
+
+type ClientDomainQueryRes struct {
+	Domain string `json:"domain"` // 域名
+}
+
 type ClientQueryListRes struct {
 	List     []*do.User `json:"list"`      // 列表
 	Page     int        `json:"page"`      // 分页码

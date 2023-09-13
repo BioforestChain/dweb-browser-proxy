@@ -6,18 +6,17 @@
 package service
 
 import (
-	"github.com/gogf/gf/v2/net/ghttp"
 	v1 "proxyServer/api/client/v1"
-
 	"proxyServer/internal/model/entity"
+	//"github.com/gogf/gf/v2/net/ghttp"
 )
 
 type (
 	IMiddleware interface {
-		GenToken(userID uint32, DeviceIdentification string) (string, string, int64, error)
+		GenToken(userID uint32, deviceIdentification string) (string, string, int64, error)
 		ParseToken(tokenString string) (*entity.MyClaims, error)
 		RefreshToken(accessToken, refreshToken string) (*v1.ClientUserRefreshTokenRes, error)
-		Response(r *ghttp.Request)
+		//ResponseHandler(r *ghttp.Request)
 	}
 )
 

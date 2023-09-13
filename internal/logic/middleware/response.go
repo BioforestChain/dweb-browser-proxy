@@ -16,7 +16,7 @@ type Response struct {
 	Data    interface{} `json:"data"    dc:"返回的数据"`
 }
 
-func (s *sMiddleware) Response(r *ghttp.Request) {
+func ResponseHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 
 	if r.Response.BufferLength() > 0 {
@@ -27,7 +27,7 @@ func (s *sMiddleware) Response(r *ghttp.Request) {
 	if r.Response.Status >= http.StatusInternalServerError {
 		// 清除掉缓存区，防止服务器信息泄露到客户端
 		r.Response.ClearBuffer()
-		r.Response.Writeln("服务器打盹了，请稍后再来找他！")
+		r.Response.Write(Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
 	}
 
 	var (
@@ -38,10 +38,29 @@ func (s *sMiddleware) Response(r *ghttp.Request) {
 	)
 
 	if err != nil {
-		msg = err.Error()
+		if code == gcode.CodeNil {
+			code = gcode.CodeInternalError
+		}
+		//msg = err.Error()
+		msg = code.Message()
 	} else {
-		code = gcode.CodeOK
-		msg = packed.Err.GetMsg(code.Code())
+		if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
+			msg = http.StatusText(r.Response.Status)
+			switch r.Response.Status {
+			case http.StatusNotFound:
+				code = gcode.CodeNotFound
+			case http.StatusForbidden:
+				code = gcode.CodeNotAuthorized
+			default:
+				code = gcode.CodeUnknown
+			}
+			// It creates error as it can be retrieved by other middlewares.
+			err = gerror.NewCode(code, msg)
+			r.SetError(err)
+		} else {
+			code = gcode.CodeOK
+			msg = packed.Err.GetErrorMessage(code.Code())
+		}
 	}
 
 	r.Response.WriteJson(Response{

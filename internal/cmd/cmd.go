@@ -101,7 +101,8 @@ var (
 			})
 			s.Group("/proxy", func(group *ghttp.RouterGroup) {
 				group.Middleware(
-					ghttp.MiddlewareHandlerResponse,
+					//ghttp.MiddlewareHandlerResponse,
+					middleware.ResponseHandler,
 					ghttp.MiddlewareCORS,
 					MiddlewareErrorHandler,
 				)
@@ -113,7 +114,6 @@ var (
 						pre_user.New(),
 					)
 					group.Middleware(middleware.JWTAuth)
-					//group.Middleware(service.Middleware().Auth)
 					group.Bind(
 						user.New(),
 					)

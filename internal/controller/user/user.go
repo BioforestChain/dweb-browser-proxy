@@ -16,28 +16,28 @@ func New() *Controller {
 	return &Controller{}
 }
 
-// ClientDomainReg
+// ClientAppInfoReport
 //
-//	@Description: 域名注册
+//	@Description: App信息上报
 //	@receiver c
 //	@param ctx
 //	@param req
 //	@return res
 //	@return err
-func (c *Controller) ClientDomainReg(ctx context.Context, req *v1.ClientDomainRegReq) (res *v1.ClientRegRes, err error) {
+func (c *Controller) ClientAppInfoReport(ctx context.Context, req *v1.ClientAppInfoReportReq) (res *v1.ClientRegRes, err error) {
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
-		fmt.Println("ClientDomainReg Validator", err)
+		fmt.Println("ClientAppInfoReport Validator", err)
 	}
 	var getUserId uint32
-	err = service.User().CreateDomain(ctx, model.UserDomainCreateInput{
+	err = service.User().CreateAppInfo(ctx, model.UserAppInfoCreateInput{
 		UserId:               getUserId,
 		UserName:             req.UserName,
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
 		PublicKey:            req.PublicKey,
 		AppName:              req.AppName,
-		Domain:               req.Domain,
-		Remark:               req.Remark,
+		//Domain:               req.Domain,
+		Remark: req.Remark,
 	})
 	return
 }

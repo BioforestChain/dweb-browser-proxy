@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"database/sql"
+
 	//"github.com/gogf/gf/v2/frame/g"
 
 	//"github.com/gogf/gf/v2/frame/g"
@@ -32,7 +33,7 @@ type (
 		GetUserId(ctx context.Context, Name string) (uint32, error)
 		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)
 		IsDomainAvailable(ctx context.Context, domain string) (bool, error)
-		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
+		CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error)
 	}
 )
 

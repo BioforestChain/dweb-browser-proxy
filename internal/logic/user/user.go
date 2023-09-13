@@ -47,6 +47,8 @@ func (s *sUser) IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bo
 
 // Create creates user account.
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
+	//domain
+
 	//设备标识用户公钥生成
 	md5DeviceIdentification, _ := s.GenerateMD5ByDeviceIdentification(in.PublicKey)
 	var (
@@ -57,7 +59,6 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 	if err != nil {
 		return nil, err
 	}
-
 	//TODO 暂定 没有用户名用设备标识填充
 	if in.Name == "" {
 		in.Name = md5DeviceIdentification
@@ -95,9 +96,13 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 				return err
 			}
 		} else {
+			//
+			rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+			domain := in.Name + "." + rootDomainName.String()
 			result, err = dao.ProxyServerUser.Ctx(ctx).Data(do.User{
 				Name:      in.Name,
 				PublicKey: in.PublicKey,
+				Domain:    domain,
 				Timestamp: nowTimestamp,
 				Remark:    in.Remark,
 			}).Insert()
@@ -153,7 +158,8 @@ func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entit
 func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error) {
 	//app 域名全局唯一
 	var (
-		getUserId uint32
+		getUserId  uint32
+		entityUser *v1.ClientDomainQueryRes
 		//getDeviceId int
 	)
 	getUserId, err = s.GetUserId(ctx, in.UserName)
@@ -173,13 +179,27 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 		"user_id":        getUserId,
 		//"device_id":      getDeviceId,
 	}
-	one, err := dao.App.Ctx(ctx).Where(condition).One()
+	one, err := dao.App.Ctx(ctx).Fields("identification").Where(condition).One()
 	if err != nil {
 		return nil, err
 	}
+	conUser := g.Map{
+		"id": getUserId,
+	}
+	userInfo, err := dao.ProxyServerUser.Ctx(ctx).Fields("domain").Where(conUser).One()
+	if err != nil {
+		return nil, err
+	}
+
 	if err = one.Struct(&entities); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
+
+	if err = userInfo.Struct(&entityUser); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	entities.Domain = entityUser.Domain
 	return entities, err
 }
 
@@ -268,7 +288,7 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 	return count == 0, nil
 }
 
-// CreateDomain
+// CreateAppInfo
 //
 //	@Description: 注册域名
 //	@receiver s
@@ -276,20 +296,20 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 //	@param Name
 //	@return int
 //	@return error
-func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error) {
+func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error) {
 	var (
-		available   bool
+		//available   bool
 		getUserId   uint32
 		getDeviceId int
 	)
-	// domain checks.
-	available, err = s.IsDomainAvailable(ctx, in.Domain)
-	if err != nil {
-		return err
-	}
-	if !available {
-		return gerror.Newf(`Domain "%s" is already token by others`, in.Domain)
-	}
+	//// domain checks.
+	//available, err = s.IsDomainAvailable(ctx, in.Domain)
+	//if err != nil {
+	//	return err
+	//}
+	//if !available {
+	//	return gerror.Newf(`Domain "%s" is already token by others`, in.Domain)
+	//}
 	getUserId, err = s.GetUserId(ctx, in.UserName)
 	if err != nil {
 		return err
@@ -313,9 +333,9 @@ func (s *sUser) CreateDomain(ctx context.Context, in model.UserDomainCreateInput
 			DeviceId:       getDeviceId,
 			Name:           in.AppName,
 			Identification: in.AppIdentification,
-			Domain:         in.Domain,
-			Timestamp:      nowTimestamp,
-			Remark:         in.Remark,
+			//Domain:         in.Domain,
+			Timestamp: nowTimestamp,
+			Remark:    in.Remark,
 		}).Insert()
 		if err != nil {
 			return err
