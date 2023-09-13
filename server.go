@@ -61,13 +61,14 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 			//body := bodyReceiver.GetMetaBody().Data
 			//log.Println("onRequest: ", request.URL, string(body), ic)
 
+			body := `{"code": 0, "message": "hi"}`
 			res := ipc.NewResponse(
 				request.ID,
 				200,
 				ipc.NewHeaderWithExtra(map[string]string{
 					"Content-Type": "application/json",
 				}),
-				ipc.NewBodySender([]byte("hi"), ic),
+				ipc.NewBodySender([]byte(body), ic),
 				ic,
 			)
 

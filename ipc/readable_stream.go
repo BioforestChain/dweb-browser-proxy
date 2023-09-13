@@ -22,8 +22,8 @@ var ErrGetReader = errors.New("failed to execute 'getReader' on 'ReadableStream'
 type ReadableStream struct {
 	ID            string
 	dataChan      chan []byte
-	closed        bool   // true when close(dataChan)
-	highWaterMark uint64 // default 1
+	closed        bool    // true when close(dataChan)
+	highWaterMark *uint64 // default 10
 	readerLocked  bool
 	mu            sync.Mutex
 	onStart       Hook // 使用onStart要自行实现退出机制，否则可能会出现goroutine泄露，
@@ -39,6 +39,7 @@ type ReadableStream struct {
 type Hook func(controller *ReadableStreamDefaultController)
 
 var streamIDAcc uint64
+var defaultHighWaterMark uint64 = 10
 
 func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	stream := &ReadableStream{}
@@ -47,13 +48,12 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 		option(stream)
 	}
 
-	if stream.highWaterMark == 0 {
-		stream.highWaterMark = 10
+	if stream.highWaterMark == nil {
+		stream.highWaterMark = &defaultHighWaterMark
 	}
 
-	stream.dataChan = make(chan []byte, stream.highWaterMark)
+	stream.dataChan = make(chan []byte, *stream.highWaterMark)
 	stream.cancelChan = make(chan struct{})
-	stream.pullChan = make(chan struct{}, 1)
 	stream.Controller = &ReadableStreamDefaultController{stream: stream}
 
 	if stream.onStart != nil {
@@ -69,6 +69,8 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	}
 
 	if stream.onPull != nil {
+		stream.pullChan = make(chan struct{}, 1)
+
 		go func() {
 			stream.pulling()
 
@@ -161,7 +163,7 @@ func (stream *ReadableStream) pull() {
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
 
-	if len(stream.pullChan) == 0 && !stream.pullClosed {
+	if stream.pullChan != nil && len(stream.pullChan) == 0 && !stream.pullClosed {
 		stream.pullChan <- struct{}{}
 	}
 }
@@ -174,7 +176,7 @@ func (stream *ReadableStream) pulling() {
 	}()
 
 	v := stream.Controller.desiredSize()
-	if v > 0 {
+	if v > 0 && stream.onPull != nil {
 		stream.onPull(stream.Controller)
 	}
 }
@@ -183,7 +185,7 @@ func (stream *ReadableStream) stopPull() {
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
 
-	if !stream.pullClosed {
+	if stream.pullChan != nil && !stream.pullClosed {
 		close(stream.pullChan)
 		stream.pullClosed = true
 	}
@@ -217,7 +219,7 @@ func (ctrl *ReadableStreamDefaultController) Close() {
 }
 
 func (ctrl *ReadableStreamDefaultController) desiredSize() int {
-	return int(ctrl.stream.highWaterMark) - ctrl.stream.Len()
+	return int(*ctrl.stream.highWaterMark) - ctrl.stream.Len()
 }
 
 type ReadableStreamDefaultReader struct {
@@ -247,7 +249,7 @@ func (reader *ReadableStreamDefaultReader) Read() (*StreamResult, error) {
 		return &StreamResult{Done: true, Value: nil}, nil
 	}
 
-	return &StreamResult{Value: data}, nil
+	return &StreamResult{Done: false, Value: data}, nil
 }
 
 // Cancel Calling this method signals a loss of interest in the stream by a consumer.
@@ -284,7 +286,7 @@ type ReadableStreamOption func(stream *ReadableStream)
 
 func WithHighWaterMark(watermark uint64) ReadableStreamOption {
 	return func(stream *ReadableStream) {
-		stream.highWaterMark = watermark
+		stream.highWaterMark = &watermark
 	}
 }
 

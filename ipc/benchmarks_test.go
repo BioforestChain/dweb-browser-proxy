@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TODO complete full process bench
 func BenchmarkIPC(b *testing.B) {
 	readableStreamIpc := NewReadableStreamIPCWithDefaultInputStream(CLIENT, SupportProtocol{Raw: true})
 

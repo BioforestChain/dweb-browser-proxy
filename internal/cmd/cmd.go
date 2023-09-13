@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"golang.org/x/time/rate"
+	"io"
 	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
@@ -81,12 +82,7 @@ var (
 					MiddlewareErrorHandler,
 				)
 				group.ALL("/*any", func(r *ghttp.Request) {
-					var (
-						req *v1.IpcReq
-						res *v1.IpcRes
-						err error
-					)
-					req = &v1.IpcReq{}
+					req := &v1.IpcReq{}
 					req.Header = strings.Join(r.Header["Content-Type"], "")
 					req.Method = r.Method
 					req.URL = r.GetUrl()
@@ -95,11 +91,19 @@ var (
 					req.ClientID = r.Get("clientID").String()
 					rateRes := MiddlewareLimitHandler(r, limit, req.ClientID)
 					if rateRes {
-						res, err = Proxy2Ipc(ctx, hub, req)
+						resIpc, err := Proxy2Ipc(ctx, hub, req)
 						if err != nil {
 							g.Log().Warning(ctx, "Proxy2Ipc err :", err)
 						}
-						r.Response.Write(res)
+
+						for k, v := range resIpc.Header {
+							r.Response.Header().Set(k, v)
+						}
+
+						if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
+							// TODO
+							r.Response.WriteStatus(400, "请求出错")
+						}
 					}
 				})
 			})
@@ -184,15 +188,7 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@return res
 //	@return err
 
-func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes, err error) {
-	req = &v1.IpcReq{
-		Host:     req.Host,
-		Method:   req.Method,
-		URL:      req.URL,
-		Header:   req.Header,
-		ClientID: req.ClientID,
-	}
-	res = &v1.IpcRes{}
+func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Response, err error) {
 	// 验证 req.Host 是否存于数据库中
 	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
 	//if !valCheckUrl {
@@ -202,8 +198,7 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 	//}
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
-		res.Ipc = "The service is unavailable"
-		return res, nil
+		return nil, errors.New("the service is unavailable")
 	}
 	clientIpc := client.GetIpc()
 
@@ -212,26 +207,10 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *v1.IpcRes
 		Header: map[string]string{"Content-Type": req.Header},
 	})
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
-	//fmt.Printf("------------resIpc:%#v\n", resIpc)
 	if err != nil {
 		log.Println("ipc response err: ", err)
-		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		res.Ipc = err.Error()
-		return res, err
+		return nil, err
 	}
-	//todo
-	//for k, v := range resIpc.Header {
-	//	fmt.Printf("-----------k:%#v\n", k)
-	//	fmt.Printf("-----------v:%#v\n", v)
-	//	//w.Header().Set(k, v)
-	//}
 
-	resStr, err := json.Marshal(resIpc)
-	if err != nil {
-		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
-		res.Ipc = err.Error()
-		return res, err
-	}
-	res.Ipc = string(resStr)
-	return res, err
+	return resIpc, nil
 }

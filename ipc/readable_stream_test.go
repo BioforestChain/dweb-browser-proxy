@@ -78,6 +78,28 @@ func TestReadableStreamWithOptions(t *testing.T) {
 }
 
 func TestReadableStream_onPull(t *testing.T) {
+	t.Run("onPull is nil", func(t *testing.T) {
+		stream := NewReadableStream(WithHighWaterMark(0))
+
+		var i int
+		go func() {
+			reader := stream.GetReader()
+			for {
+				_, _ = reader.Read()
+				i++
+			}
+		}()
+
+		_ = stream.Enqueue([]byte("hi"))
+		_ = stream.Enqueue([]byte("hi"))
+
+		time.Sleep(10 * time.Millisecond)
+
+		if i != 2 {
+			t.Fatal("onPull failed")
+		}
+	})
+
 	t.Run("onPull is executed once when initialization", func(t *testing.T) {
 		var called int
 
@@ -112,7 +134,7 @@ func TestReadableStream_onPull(t *testing.T) {
 			time.Sleep(time.Millisecond * 10)
 		}
 
-		if called == 0 || called > 3 {
+		if !(called > 0 && called <= 3) {
 			t.Fatal("onPull failed")
 		}
 	})
@@ -137,7 +159,7 @@ func TestReadableStream_onPull(t *testing.T) {
 		}
 
 		time.Sleep(time.Millisecond * 50)
-		if called == 0 || called > 3 {
+		if !(called > 0 && called <= 3) {
 			t.Fatal("onPull failed")
 		}
 	})
