@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -18,7 +20,9 @@ import (
 	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
+	"proxyServer/internal/model"
 	"proxyServer/internal/packed"
+	"proxyServer/internal/service"
 	"proxyServer/ipc"
 	"strings"
 	"sync"
@@ -33,7 +37,8 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 		v, ok := s.Load(clientID)
 		if !ok {
 			var limit *rate.Limiter
-			// 创建一个每 200 毫秒限1个请求的限制器
+			// set limit burst
+			// default: 100ms 1 burst ; manifest/config/config.yaml
 			limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
 			limitNumDur := limitNum.Duration() * time.Millisecond
 			burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
@@ -42,7 +47,7 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 			v = limit
 		}
 		tmp := v.(*rate.Limiter)
-		// 请求限制器,如果限制成功则处理请求
+		// Request a limiter, which processes the request if throttling succeeds
 		if !tmp.Allow() {
 			r.Response.WriteStatus(http.StatusTooManyRequests)
 			r.Response.ClearBuffer()
@@ -102,7 +107,7 @@ var (
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
-						//排除不受JWT认证的路由
+						//Exclude routes that are not JWT certified
 						ping.New(),
 						auth.New(),
 						pre_user.New(),
@@ -161,7 +166,7 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 
 // Proxy2Ipc
 //
-//	@Description: 转到Ipc
+//	@Description: The request goes to the IPC object for processing
 //	@param ctx
 //	@param hub
 //	@param req
@@ -175,16 +180,24 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 		Header:   req.Header,
 		ClientID: req.ClientID,
 	}
-	res = &middleware.Response{}
-	res.Code = consts.ServiceIsUnavailable
-	res.Message = packed.Err.GetErrorMessage(consts.ServiceIsUnavailable)
-	res.Data = nil
-	// 验证 req.Host 是否存于数据库中
-	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
-	//if !valCheckUrl {
-	//res.Message = fmt.Sprintf(`"%s"`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
-	//return res, nil
-	//}
+	res = &middleware.Response{
+		consts.ServiceIsUnavailable,
+		packed.Err.GetErrorMessage(consts.ServiceIsUnavailable),
+		nil,
+	}
+	// Verify req.Host exists in the database
+	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
+	if !valCheckUrl {
+		res.Message = fmt.Sprintf(`"%s"`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
+		return res, nil
+	}
+	// Verify req.ClientID exists in the database
+	valCheckDevice := service.User().IsDeviceExist(ctx, model.CheckDeviceInput{DeviceIdentification: req.ClientID})
+	if !valCheckDevice {
+		res.Message = fmt.Sprintf(`"%s"`, gerror.Newf(`Sorry, your device "%s" is not registered yet`, req.ClientID))
+		return res, nil
+	}
+
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
 		return res, nil
@@ -209,7 +222,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *middlewar
 	//}
 	resStr, err := json.Marshal(resIpc)
 	if err != nil {
-		//res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, err.Error())
 		res.Message = err.Error()
 		return res, err
 	}

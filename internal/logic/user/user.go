@@ -35,6 +35,15 @@ func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool 
 	}
 	return count > 0
 }
+func (s *sUser) IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool {
+	count, err := dao.Device.Ctx(ctx).Fields("id").Where(do.Device{
+		Identification: in.DeviceIdentification,
+	}).Count()
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
 
 // Create creates user account.
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {

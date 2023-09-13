@@ -47,6 +47,9 @@ type AppQueryInput struct {
 type CheckUrlInput struct {
 	Host string
 }
+type CheckDeviceInput struct {
+	DeviceIdentification string
+}
 
 type DataToDevice struct {
 	UserId uint32 // 用户id
