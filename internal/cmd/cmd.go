@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 	"golang.org/x/time/rate"
 	"io"
+	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/api/ws"
@@ -56,7 +57,7 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 }
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
-	if r.Response.Status >= http.StatusInternalServerError {
+	if r.Response.Status >= http.StatusInternalServerError && r.Response.Status < consts.InitRedisErr {
 		r.Response.WriteStatus(http.StatusInternalServerError)
 		r.Response.ClearBuffer()
 		r.Response.Write(middleware.Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
@@ -76,7 +77,6 @@ var (
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(
 					MiddlewareLimitHandler(),
-					MiddlewareErrorHandler,
 				)
 				group.ALL("/*any", func(r *ghttp.Request) {
 					req := &v1.IpcReq{}
@@ -86,25 +86,20 @@ var (
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("clientID").String()
-
 					resIpc, err := Proxy2Ipc(ctx, hub, req)
 					if err != nil {
 						resIpc = ipcErrResponse(consts.ServiceIsUnavailable, err.Error())
 					}
-
 					for k, v := range resIpc.Header {
 						r.Response.Header().Set(k, v)
 					}
-
 					if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
 						r.Response.WriteStatus(400, "请求出错")
-						//r.Response.WriteJsonExit(res)
 					}
 				})
 			})
 			s.Group("/proxy", func(group *ghttp.RouterGroup) {
 				group.Middleware(
-					//ghttp.MiddlewareHandlerResponse,
 					middleware.ResponseHandler,
 					ghttp.MiddlewareCORS,
 					MiddlewareErrorHandler,
@@ -175,24 +170,23 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@param req
 //	@return res
 //	@return err
-
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Response, err error) {
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
 		return nil, errors.New("the service is unavailable")
 	}
-
 	// Verify req.Host exists in the database
 	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
 	if !valCheckUrl {
+		log.Println(gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
 		return nil, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host)
 	}
 	// Verify req.ClientID exists in the database
 	valCheckDevice := service.User().IsDeviceExist(ctx, model.CheckDeviceInput{DeviceIdentification: req.ClientID})
 	if !valCheckDevice {
+		log.Println(gerror.Newf(`Sorry, your device  "%s" is not registered yet`, req.ClientID))
 		return nil, gerror.Newf(`Sorry, your device "%s" is not registered yet`, req.ClientID)
 	}
-
 	clientIpc := client.GetIpc()
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
@@ -202,10 +196,8 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	if err != nil {
 		return nil, err
 	}
-
 	return resIpc, nil
 }
-
 func ipcErrResponse(code int, msg string) *ipc.Response {
 	body := fmt.Sprintf(`{"code": %d, "message": %s, "data": nil}`, code, msg)
 	res := ipc.NewResponse(

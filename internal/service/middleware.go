@@ -8,7 +8,6 @@ package service
 import (
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model/entity"
-	//"github.com/gogf/gf/v2/net/ghttp"
 )
 
 type (
@@ -16,7 +15,6 @@ type (
 		GenToken(userID uint32, deviceIdentification string) (string, string, int64, error)
 		ParseToken(tokenString string) (*entity.MyClaims, error)
 		RefreshToken(accessToken, refreshToken string) (*v1.ClientUserRefreshTokenRes, error)
-		//ResponseHandler(r *ghttp.Request)
 	}
 )
 

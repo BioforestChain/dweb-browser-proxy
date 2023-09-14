@@ -24,6 +24,7 @@ type ClientAppInfoReportReq struct {
 	AppIdentification    string `v:"required"` //app唯一标识
 	DeviceIdentification string `v:""`         //设备唯一标识
 	PublicKey            string `v:"required"` //公钥
+	IsInstall            uint32 `v:"required"` //公钥
 	//Domain               string `v:"required|domain"` //域名
 	//Identification string `v:"required"`        // 通过用户名，查到user_id，数据插入到app表里
 	Remark string

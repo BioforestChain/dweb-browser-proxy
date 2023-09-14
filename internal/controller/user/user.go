@@ -36,8 +36,8 @@ func (c *Controller) ClientAppInfoReport(ctx context.Context, req *v1.ClientAppI
 		DeviceIdentification: req.DeviceIdentification,
 		PublicKey:            req.PublicKey,
 		AppName:              req.AppName,
-		//Domain:               req.Domain,
-		Remark: req.Remark,
+		IsInstall:            req.IsInstall,
+		Remark:               req.Remark,
 	})
 	return
 }

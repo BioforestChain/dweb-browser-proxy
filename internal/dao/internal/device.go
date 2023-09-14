@@ -20,28 +20,30 @@ type DeviceDao struct {
 
 // DeviceColumns defines and stores column names for table device.
 type DeviceColumns struct {
-	Id             string //
-	UserId         string // 用户id
-	Name           string // 名称
-	Identification string // 设备标识
-	Remark         string // 备注信息
-	Timestamp      string // 时间戳
-	CreatedAt      string // Created Time
-	UpdateAt       string // Updated Time
-	DeletedAt      string // Deleted Time
+	Id                string //
+	UserId            string // 用户id
+	Name              string // 名称
+	SrcIdentification string // 源设备标识
+	Identification    string // 设备标识
+	Remark            string // 备注信息
+	Timestamp         string // 时间戳
+	CreatedAt         string // Created Time
+	UpdateAt          string // Updated Time
+	DeletedAt         string // Deleted Time
 }
 
 // deviceColumns holds the columns for table device.
 var deviceColumns = DeviceColumns{
-	Id:             "id",
-	UserId:         "user_id",
-	Name:           "name",
-	Identification: "identification",
-	Remark:         "remark",
-	Timestamp:      "timestamp",
-	CreatedAt:      "created_at",
-	UpdateAt:       "update_at",
-	DeletedAt:      "deleted_at",
+	Id:                "id",
+	UserId:            "user_id",
+	Name:              "name",
+	SrcIdentification: "src_identification",
+	Identification:    "identification",
+	Remark:            "remark",
+	Timestamp:         "timestamp",
+	CreatedAt:         "created_at",
+	UpdateAt:          "update_at",
+	DeletedAt:         "deleted_at",
 }
 
 // NewDeviceDao creates and returns a new DAO object for table data access.

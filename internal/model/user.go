@@ -27,6 +27,7 @@ type UserAppInfoCreateInput struct {
 	AppIdentification    string
 	DeviceIdentification string
 	PublicKey            string
+	IsInstall            uint32
 	//Domain               string
 	Timestamp string
 	Remark    string

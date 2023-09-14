@@ -1,5 +1,4 @@
 // 统一响应处理
-
 package middleware
 
 import (
@@ -18,16 +17,8 @@ type Response struct {
 
 func ResponseHandler(r *ghttp.Request) {
 	r.Middleware.Next()
-
 	if r.Response.BufferLength() > 0 {
 		return
-	}
-
-	// 先过滤掉服务器内部错误
-	if r.Response.Status >= http.StatusInternalServerError {
-		// 清除掉缓存区，防止服务器信息泄露到客户端
-		r.Response.ClearBuffer()
-		r.Response.Write(Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
 	}
 
 	var (
@@ -36,13 +27,11 @@ func ResponseHandler(r *ghttp.Request) {
 		code = gerror.Code(err)
 		msg  string
 	)
-
 	if err != nil {
 		if code == gcode.CodeNil {
 			code = gcode.CodeInternalError
 		}
-		//msg = err.Error()
-		msg = code.Message()
+		msg = err.Error()
 	} else {
 		if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 			msg = http.StatusText(r.Response.Status)
@@ -62,7 +51,6 @@ func ResponseHandler(r *ghttp.Request) {
 			msg = packed.Err.GetErrorMessage(code.Code())
 		}
 	}
-
 	r.Response.WriteJson(Response{
 		Code:    code.Code(),
 		Message: msg,

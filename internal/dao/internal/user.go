@@ -22,6 +22,7 @@ type UserDao struct {
 type UserColumns struct {
 	Id        string //
 	Name      string // 用户名
+	Domain    string // 域名
 	Remark    string // 备注信息
 	Timestamp string // 时间戳
 	CreatedAt string // Created Time
@@ -34,6 +35,7 @@ type UserColumns struct {
 var userColumns = UserColumns{
 	Id:        "id",
 	Name:      "name",
+	Domain:    "domain",
 	Remark:    "remark",
 	Timestamp: "timestamp",
 	CreatedAt: "created_at",

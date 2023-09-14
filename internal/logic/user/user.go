@@ -27,7 +27,7 @@ func New() service.IUser {
 }
 
 func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
-	count, err := dao.App.Ctx(ctx).Fields("id").Where(do.App{
+	count, err := dao.User.Ctx(ctx).Where(do.User{
 		Domain: in.Host,
 	}).Count()
 	if err != nil {
@@ -36,7 +36,7 @@ func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool 
 	return count > 0
 }
 func (s *sUser) IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool {
-	count, err := dao.Device.Ctx(ctx).Fields("id").Where(do.Device{
+	count, err := dao.Device.Ctx(ctx).Where(do.Device{
 		Identification: in.DeviceIdentification,
 	}).Count()
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		result  sql.Result
 		reqData model.DataToDevice
 	)
-	err = dao.ProxyServerUser.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+	err = dao.User.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		reqData.Identification = md5DeviceIdentification
 		reqData.SrcIdentification = in.Identification
 		reqData.Timestamp = nowTimestamp
@@ -99,7 +99,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 			//
 			rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
 			domain := in.Name + "." + rootDomainName.String()
-			result, err = dao.ProxyServerUser.Ctx(ctx).Data(do.User{
+			result, err = dao.User.Ctx(ctx).Data(do.User{
 				Name:      in.Name,
 				PublicKey: in.PublicKey,
 				Domain:    domain,
@@ -146,7 +146,7 @@ func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entit
 	//condition := g.Map{
 	//	"name like ?": "%" + in.Name + "%",
 	//}
-	all, total, err := dao.ProxyServerUser.Ctx(ctx).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
+	all, total, err := dao.User.Ctx(ctx).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -186,7 +186,7 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 	conUser := g.Map{
 		"id": getUserId,
 	}
-	userInfo, err := dao.ProxyServerUser.Ctx(ctx).Fields("domain").Where(conUser).One()
+	userInfo, err := dao.User.Ctx(ctx).Fields("domain").Where(conUser).One()
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func (s *sUser) IsIdentificationAvailable(ctx context.Context, identification st
 
 // IsNameAvailable checks and returns given Name is available for signing up.
 func (s *sUser) IsNameAvailable(ctx context.Context, Name string) (bool, error) {
-	count, err := dao.ProxyServerUser.Ctx(ctx).Where(do.User{
+	count, err := dao.User.Ctx(ctx).Where(do.User{
 		Name: Name,
 	}).Count()
 	if err != nil {
@@ -251,7 +251,7 @@ func (s *sUser) IsNameAvailable(ctx context.Context, Name string) (bool, error) 
 // @return bool
 // @return error
 func (s *sUser) GetUserId(ctx context.Context, Name string) (uint32, error) {
-	userId, err := dao.ProxyServerUser.Ctx(ctx).Fields("id").Where(do.User{
+	userId, err := dao.User.Ctx(ctx).Fields("id").Where(do.User{
 		Name: Name,
 	}).Value()
 	if err != nil {
@@ -279,7 +279,7 @@ func (s *sUser) GetDeviceId(ctx context.Context, DeviceIdentification string) (i
 //	@return bool
 //	@return error
 func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, error) {
-	count, err := dao.App.Ctx(ctx).Where(do.App{
+	count, err := dao.App.Ctx(ctx).Where(do.User{
 		Domain: domain,
 	}).Count()
 	if err != nil {
@@ -327,16 +327,17 @@ func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInp
 		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
 	}
 	nowTimestamp := time.Now().Unix()
+
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
 		_, err = dao.App.Ctx(ctx).Data(do.App{
 			UserId:         getUserId,
 			DeviceId:       getDeviceId,
 			Name:           in.AppName,
 			Identification: in.AppIdentification,
-			//Domain:         in.Domain,
-			Timestamp: nowTimestamp,
-			Remark:    in.Remark,
-		}).Insert()
+			Timestamp:      nowTimestamp,
+			Remark:         in.Remark,
+			IsInstall:      in.IsInstall,
+		}).Save()
 		if err != nil {
 			return err
 		}
