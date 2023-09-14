@@ -8,6 +8,8 @@ type IpcReq struct {
 	Host     string `v:"required"` //
 	ClientID string `v:"required"` // 设备id
 }
-type IpcRes struct {
-	Ipc string `json:"ipc"`
-}
+
+//type IpcRes struct {
+//
+//	//Ipc string `json:"ipc"`
+//}

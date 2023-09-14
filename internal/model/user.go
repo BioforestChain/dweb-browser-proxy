@@ -15,20 +15,21 @@ type UserCreateInput struct {
 	Name           string
 	PublicKey      string
 	Identification string
+	Domain         string
 	Timestamp      string
 	Remark         string
 }
 
-type UserDomainCreateInput struct {
+type UserAppInfoCreateInput struct {
 	UserId               uint32
 	UserName             string
 	AppName              string
 	AppIdentification    string
 	DeviceIdentification string
 	PublicKey            string
-	Domain               string
-	Timestamp            string
-	Remark               string
+	//Domain               string
+	Timestamp string
+	Remark    string
 }
 
 type UserQueryInput struct {
@@ -46,6 +47,9 @@ type AppQueryInput struct {
 
 type CheckUrlInput struct {
 	Host string
+}
+type CheckDeviceInput struct {
+	DeviceIdentification string
 }
 
 type DataToDevice struct {

@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"database/sql"
+
 	//"github.com/gogf/gf/v2/frame/g"
 
 	//"github.com/gogf/gf/v2/frame/g"
@@ -21,6 +22,7 @@ import (
 type (
 	IUser interface {
 		IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool
+		IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool
 		Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
 		InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error)
 		GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error)
@@ -31,7 +33,7 @@ type (
 		GetUserId(ctx context.Context, Name string) (uint32, error)
 		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)
 		IsDomainAvailable(ctx context.Context, domain string) (bool, error)
-		CreateDomain(ctx context.Context, in model.UserDomainCreateInput) (err error)
+		CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error)
 	}
 )
 

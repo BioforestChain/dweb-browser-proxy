@@ -7,36 +7,28 @@ import (
 	"strings"
 )
 
-func (c *pErr) GetErrorMessage(errorCode int32) string {
+func (c *pErr) GetErrorMessage(errorCode int) string {
 	if message, ok := consts.ErrorMessageList()[errorCode]; ok {
 		return message
 	}
 
-	return "请求错误"
+	//return consts.ErrorMessageList()[consts.RequestErr]
+	return c.GetErrorMessage(consts.RequestErr)
 }
 
 type pErr struct {
 	maps map[int]string
 }
 
-var Err = &pErr{
-	maps: map[int]string{
-		99999: "系统错误！",
-	},
-}
-
-// GetMsg 获取code码对应的msg
-func (c *pErr) GetMsg(code int) string {
-	return c.maps[code]
-}
+var Err = &pErr{}
 
 // Skip 抛出一个业务级别的错误，不会打印错误堆栈信息
 func (c *pErr) Skip(code int, msg ...string) (err error) {
 	var msgStr string
 	if len(msg) == 0 {
-		msgStr = c.GetMsg(code)
+		msgStr = c.GetErrorMessage(code)
 	} else {
-		msg = append([]string{c.GetMsg(code)}, msg...)
+		msg = append([]string{c.GetErrorMessage(code)}, msg...)
 		msgStr = strings.Join(msg, ", ")
 	}
 	return gerror.NewOption(gerror.Option{
@@ -51,9 +43,9 @@ func (c *pErr) Skip(code int, msg ...string) (err error) {
 // !!! 使用该方法传入error类型时，一定要注意不要泄露系统信息
 func (c *pErr) Sys(msg ...interface{}) error {
 	var (
-		code     = 99999
+		code     = consts.SystemErr
 		msgSlice = []string{
-			c.GetMsg(code),
+			c.GetErrorMessage(code),
 		}
 	)
 

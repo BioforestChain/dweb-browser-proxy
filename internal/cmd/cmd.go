@@ -3,13 +3,14 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"golang.org/x/time/rate"
 	"io"
-	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/api/ws"
@@ -19,41 +20,46 @@ import (
 	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	"proxyServer/internal/logic/middleware"
+	"proxyServer/internal/model"
+	"proxyServer/internal/service"
 	"proxyServer/ipc"
 	"strings"
+	"sync"
 	"time"
 )
 
-func MiddlewareAuth(r *ghttp.Request) {
-	token := r.Get("token")
-
-	if token.String() == "123456" {
-		//r.Response.Writeln("auth")
-
+func MiddlewareLimitHandler() func(r *ghttp.Request) {
+	s := sync.Map{}
+	return func(r *ghttp.Request) {
 		r.Middleware.Next()
-	} else {
-		r.Response.WriteStatus(http.StatusForbidden)
-
+		clientID := r.Get("clientID").String()
+		v, ok := s.Load(clientID)
+		if !ok {
+			var limit *rate.Limiter
+			// set limit burst
+			// default: 100ms 1 burst ; manifest/config/config.yaml
+			limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
+			limitNumDur := limitNum.Duration() * time.Millisecond
+			burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
+			limit = rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
+			s.Store(clientID, limit)
+			v = limit
+		}
+		tmp := v.(*rate.Limiter)
+		// Request a limiter, which processes the request if throttling succeeds
+		if !tmp.Allow() {
+			r.Response.WriteStatus(http.StatusTooManyRequests)
+			r.Response.ClearBuffer()
+			r.Response.Write(middleware.Response{http.StatusTooManyRequests, "The request is too fast, please try again later!", nil})
+		}
 	}
 }
-
-func MiddlewareLimitHandler(r *ghttp.Request, limit *rate.Limiter, clientId string) bool {
-	r.Middleware.Next()
-	// 请求限制器,如果限制成功则处理请求
-	if clientId == "8cb46dde8d8edb41994e0b88f87a31dc" && !limit.Allow() {
-		r.Response.WriteStatus(http.StatusTooManyRequests)
-		r.Response.ClearBuffer()
-		r.Response.Writeln("哎哟请求过快，服务器居然需要休息下，请稍后再试吧！")
-		return false
-	}
-	return true
-}
-
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.Status >= http.StatusInternalServerError {
+		r.Response.WriteStatus(http.StatusInternalServerError)
 		r.Response.ClearBuffer()
-		r.Response.Writeln("哎哟我去，服务器居然开小差了，请稍后再试吧！")
+		r.Response.Write(middleware.Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
 	}
 }
 
@@ -64,21 +70,12 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
-
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
-
 			s.Group("/", func(group *ghttp.RouterGroup) {
-
-				// 创建一个每 200 毫秒限1个请求的限制器
-				limitNum, _ := g.Cfg().Get(context.Background(), "rate_limiter.limit")
-				limitNumDur := limitNum.Duration() * time.Millisecond
-				burst, _ := g.Cfg().Get(context.Background(), "rate_limiter.burst")
-				limit := rate.NewLimiter(rate.Every(limitNumDur), burst.Int())
-
 				group.Middleware(
-					//MiddlewareLimitHandler(limit),
+					MiddlewareLimitHandler(),
 					MiddlewareErrorHandler,
 				)
 				group.ALL("/*any", func(r *ghttp.Request) {
@@ -89,41 +86,37 @@ var (
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("clientID").String()
-					rateRes := MiddlewareLimitHandler(r, limit, req.ClientID)
-					if rateRes {
-						resIpc, err := Proxy2Ipc(ctx, hub, req)
-						if err != nil {
-							g.Log().Warning(ctx, "Proxy2Ipc err :", err)
-						}
 
-						for k, v := range resIpc.Header {
-							r.Response.Header().Set(k, v)
-						}
+					resIpc, err := Proxy2Ipc(ctx, hub, req)
+					if err != nil {
+						resIpc = ipcErrResponse(consts.ServiceIsUnavailable, err.Error())
+					}
 
-						if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
-							// TODO
-							r.Response.WriteStatus(400, "请求出错")
-						}
+					for k, v := range resIpc.Header {
+						r.Response.Header().Set(k, v)
+					}
+
+					if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
+						r.Response.WriteStatus(400, "请求出错")
+						//r.Response.WriteJsonExit(res)
 					}
 				})
 			})
-
 			s.Group("/proxy", func(group *ghttp.RouterGroup) {
-
 				group.Middleware(
-					ghttp.MiddlewareHandlerResponse,
+					//ghttp.MiddlewareHandlerResponse,
+					middleware.ResponseHandler,
 					ghttp.MiddlewareCORS,
 					MiddlewareErrorHandler,
 				)
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
-						//排除不受JWT认证的路由
+						//Exclude routes that are not JWT certified
 						ping.New(),
 						auth.New(),
 						pre_user.New(),
 					)
 					group.Middleware(middleware.JWTAuth)
-					//group.Middleware(service.Middleware().Auth)
 					group.Bind(
 						user.New(),
 					)
@@ -131,7 +124,6 @@ var (
 				s.BindHandler("/ws", func(r *ghttp.Request) {
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
-
 				// Special handler that needs authentication.
 				//group.Group("/", func(group *ghttp.RouterGroup) {
 				//	group.Middleware(service.Middleware().Auth)
@@ -139,7 +131,6 @@ var (
 				//		"/user/profile": user.New().Profile,
 				//	})
 				//})
-
 				//group.Group("/user", func(group *ghttp.RouterGroup) {
 				//	group.GET("/client-list", func(r *ghttp.Request) {
 				//
@@ -153,9 +144,7 @@ var (
 				//		r.Response.Write("drop")
 				//	})
 				//})
-
 			})
-
 			enhanceOpenAPIDoc(s)
 			s.Run()
 			return nil
@@ -167,7 +156,6 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 	openapi := s.GetOpenApi()
 	openapi.Config.CommonResponse = ghttp.DefaultHandlerResponse{}
 	openapi.Config.CommonResponseDataField = `Data`
-
 	// API description.
 	openapi.Info = goai.Info{
 		Title:       consts.OpenAPITitle,
@@ -181,7 +169,7 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 
 // Proxy2Ipc
 //
-//	@Description: 转到Ipc
+//	@Description: The request goes to the IPC object for processing
 //	@param ctx
 //	@param hub
 //	@param req
@@ -189,28 +177,45 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 //	@return err
 
 func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Response, err error) {
-	// 验证 req.Host 是否存于数据库中
-	//valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
-	//if !valCheckUrl {
-	//	//抱歉，您的域名尚未注册
-	//	res.Ipc = fmt.Sprintf(`{"msg": "%s"}`, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
-	//	return res, nil
-	//}
 	client := hub.GetClient(req.ClientID)
 	if client == nil {
 		return nil, errors.New("the service is unavailable")
 	}
-	clientIpc := client.GetIpc()
 
+	// Verify req.Host exists in the database
+	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
+	if !valCheckUrl {
+		return nil, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host)
+	}
+	// Verify req.ClientID exists in the database
+	valCheckDevice := service.User().IsDeviceExist(ctx, model.CheckDeviceInput{DeviceIdentification: req.ClientID})
+	if !valCheckDevice {
+		return nil, gerror.Newf(`Sorry, your device "%s" is not registered yet`, req.ClientID)
+	}
+
+	clientIpc := client.GetIpc()
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
 		Header: map[string]string{"Content-Type": req.Header},
 	})
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
 	if err != nil {
-		log.Println("ipc response err: ", err)
 		return nil, err
 	}
 
 	return resIpc, nil
+}
+
+func ipcErrResponse(code int, msg string) *ipc.Response {
+	body := fmt.Sprintf(`{"code": %d, "message": %s, "data": nil}`, code, msg)
+	res := ipc.NewResponse(
+		1,
+		400,
+		ipc.NewHeaderWithExtra(map[string]string{
+			"Content-Type": "application/json",
+		}),
+		ipc.NewBodySender([]byte(body), nil),
+		nil,
+	)
+	return res
 }
