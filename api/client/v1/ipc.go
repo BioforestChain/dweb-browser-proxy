@@ -6,7 +6,7 @@ type IpcReq struct {
 	Method   string `v:"required"` //
 	URL      string `v:"required"` //
 	Host     string `v:"required"` //
-	ClientID string `v:"required"` // 设备id
+	ClientID string `v:"required"` // 用户id
 }
 
 //type IpcRes struct {

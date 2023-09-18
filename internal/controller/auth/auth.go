@@ -52,7 +52,6 @@ func (c *Controller) ClientRefreshToken(ctx context.Context, req *v1.ClientRefre
 	out := service.Auth().RefreshToken(ctx, req)
 
 	return &v1.ClientUserTokenDataRes{
-		//out.UserID,
 		out.UserIdentification,
 		out.Token,
 		out.RefreshToken,

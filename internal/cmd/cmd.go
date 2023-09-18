@@ -200,15 +200,16 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	return resIpc, nil
 }
 func ipcErrResponse(code int, msg string) *ipc.Response {
-	body := fmt.Sprintf(`{"code": %d, "message": %s, "data": nil}`, code, msg)
+	body := fmt.Sprintf(`{"code": %d, "message": "%s", "data": null}`, code, msg)
+	newIpc := ipc.NewBaseIPC()
 	res := ipc.NewResponse(
 		1,
 		400,
 		ipc.NewHeaderWithExtra(map[string]string{
 			"Content-Type": "application/json",
 		}),
-		ipc.NewBodySender([]byte(body), nil),
-		nil,
+		ipc.NewBodySender([]byte(body), newIpc),
+		newIpc,
 	)
 	return res
 }

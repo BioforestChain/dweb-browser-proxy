@@ -324,15 +324,6 @@ func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInp
 	if getUserId == 0 {
 		return gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
 	}
-	//设备id
-	//getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
-	//getDeviceId, err = s.GetDeviceId(ctx, in.PublicKey)
-	//if err != nil {
-	//	return err
-	//}
-	//if getDeviceId == 0 {
-	//	return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
-	//}
 	nowTimestamp := time.Now().Unix()
 
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {

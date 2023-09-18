@@ -22,15 +22,13 @@ func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *
 	newOne, err := service.User().Create(ctx, model.UserCreateInput{
 		Name:      req.Name,
 		PublicKey: req.PublicKey,
-		//Identification: req.DeviceIdentification,
-		Remark: req.Remark,
+		Remark:    req.Remark,
 	})
 	if err != nil {
 		return
 	}
 	out := service.Auth().GenToken(ctx, newOne.UserId, newOne.UserIdentification)
 	return &v1.ClientUserTokenDataRes{
-		//newOne.UserId,
 		newOne.UserIdentification,
 		out.Token,
 		out.RefreshToken,

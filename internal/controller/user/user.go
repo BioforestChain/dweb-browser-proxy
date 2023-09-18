@@ -76,8 +76,6 @@ func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (r
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("ClientQuery Validator", err)
 	}
-	//condition := model.AppQueryInput{}
-	//app,device标识,用户名,app名
 	data, err := service.User().GetDomainInfo(ctx, model.AppQueryInput{
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
