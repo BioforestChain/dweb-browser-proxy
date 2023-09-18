@@ -33,7 +33,7 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 	s := sync.Map{}
 	return func(r *ghttp.Request) {
 		r.Middleware.Next()
-		clientID := r.Get("clientID").String()
+		clientID := r.Get("client_id").String()
 		v, ok := s.Load(clientID)
 		if !ok {
 			var limit *rate.Limiter
@@ -79,13 +79,14 @@ var (
 					MiddlewareLimitHandler(),
 				)
 				group.ALL("/*any", func(r *ghttp.Request) {
+
 					req := &v1.IpcReq{}
 					req.Header = strings.Join(r.Header["Content-Type"], "")
 					req.Method = r.Method
 					req.URL = r.GetUrl()
 					req.Host = r.GetHost()
 					//TODO 暂定用 query 参数传递
-					req.ClientID = r.Get("clientID").String()
+					req.ClientID = r.Get("client_id").String()
 					resIpc, err := Proxy2Ipc(ctx, hub, req)
 					if err != nil {
 						resIpc = ipcErrResponse(consts.ServiceIsUnavailable, err.Error())
@@ -182,10 +183,10 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 		return nil, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host)
 	}
 	// Verify req.ClientID exists in the database
-	valCheckDevice := service.User().IsDeviceExist(ctx, model.CheckDeviceInput{DeviceIdentification: req.ClientID})
-	if !valCheckDevice {
-		log.Println(gerror.Newf(`Sorry, your device  "%s" is not registered yet`, req.ClientID))
-		return nil, gerror.Newf(`Sorry, your device "%s" is not registered yet`, req.ClientID)
+	valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
+	if !valCheckUser {
+		log.Println(gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID))
+		return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
 	}
 	clientIpc := client.GetIpc()
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{

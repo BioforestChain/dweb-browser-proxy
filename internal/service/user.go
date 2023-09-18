@@ -22,13 +22,13 @@ import (
 type (
 	IUser interface {
 		IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool
-		IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool
+		IsUserExist(ctx context.Context, in model.CheckUserInput) bool
 		Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
 		InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error)
 		GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error)
 		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error)
-		GenerateMD5ByDeviceIdentification(identification string) (string, error)
-		IsIdentificationAvailable(ctx context.Context, identification string) (bool, error)
+		GenerateMD5ByPublicKeyIdentification(identification string) (string, error)
+		IsUserIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)
 		GetUserId(ctx context.Context, Name string) (uint32, error)
 		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)

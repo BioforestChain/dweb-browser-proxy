@@ -52,6 +52,9 @@ type CheckUrlInput struct {
 type CheckDeviceInput struct {
 	DeviceIdentification string
 }
+type CheckUserInput struct {
+	UserIdentification string
+}
 
 type DataToDevice struct {
 	UserId uint32 // 用户id

@@ -9,11 +9,12 @@ import (
 // 1. 用户注册
 // 1.1 设备表，一个用户可以有多个设备(暂定)
 type ClientRegReq struct {
-	g.Meta               `path:"/pre-user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
-	Name                 string `v:"required"` //用户名，昵称？
-	PublicKey            string `v:"required"` //公钥
-	DeviceIdentification string `v:""`         //暂定入参imei码，待生成设备标识
-	Remark               string
+	g.Meta `path:"/pre-user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
+	Name   string `v:""` //用户名，昵称可填可不填
+
+	PublicKey string `v:"required"` //公钥
+	//DeviceIdentification string `v:""`          //暂定入参imei码，待生成设备标识
+	Remark string
 }
 
 // 1.2  App
@@ -31,8 +32,9 @@ type ClientAppInfoReportReq struct {
 }
 
 type ClientRegRes struct {
-	DeviceIdentification string `json:"device_identification"` //设备标识，也就是clientID
-	UserId               uint32 `json:"user_id"`               //用户id
+	UserIdentification string `json:"user_identification"` //用户id
+	//DeviceIdentification string `json:"device_identification"` //设备标识，也就是clientID
+	UserId uint32 `json:"user_id"` //db中用户id
 }
 
 type ClientQueryReq struct {
@@ -72,18 +74,18 @@ type ClientRefreshTokenReq struct {
 	RefreshToken string `json:"refresh_token"`
 }
 type ClientUserTokenDataRes struct {
-	UserID               uint32 `json:"user_id"`
-	DeviceIdentification string `json:"device_identification"`
-	Token                string `json:"token"`
-	RefreshToken         string `json:"refresh_token"`
-	NowTime              string `json:"now_time"`
-	ExpireTime           string `json:"expire_time"`
+	//UserID             uint32 `json:"user_id"`
+	UserIdentification string `json:"user_identification"`
+	Token              string `json:"token"`
+	RefreshToken       string `json:"refresh_token"`
+	NowTime            string `json:"now_time"`
+	ExpireTime         string `json:"expire_time"`
 }
 
 type ClientUserRefreshTokenRes struct {
-	UserID               uint32 `json:"user_id"`
-	DeviceIdentification string `json:"device_identification"`
-	Token                string `json:"token"`
-	RefreshToken         string `json:"refresh_token"`
-	ExpireTime           int64  `json:"expire_time"`
+	UserID             uint32 `json:"user_id"`
+	UserIdentification string `json:"user_identification"`
+	Token              string `json:"token"`
+	RefreshToken       string `json:"refresh_token"`
+	ExpireTime         int64  `json:"expire_time"`
 }

@@ -44,24 +44,32 @@ func (s *sUser) IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bo
 	}
 	return count > 0
 }
+func (s *sUser) IsUserExist(ctx context.Context, in model.CheckUserInput) bool {
+	count, err := dao.User.Ctx(ctx).Where(do.User{
+		Identification: in.UserIdentification,
+	}).Count()
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
 
 // Create creates user account.
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
 	//domain
-
-	//设备标识用户公钥生成
-	md5DeviceIdentification, _ := s.GenerateMD5ByDeviceIdentification(in.PublicKey)
+	//公钥标识用户公钥生成
+	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(in.PublicKey)
 	var (
 		available bool
 		getUserId uint32
 	)
-	availableIsIdentification, err := s.IsIdentificationAvailable(ctx, md5DeviceIdentification)
-	if err != nil {
-		return nil, err
-	}
-	//TODO 暂定 没有用户名用设备标识填充
+	//availableIsUserIdentification, err := s.IsUserIdentificationAvailable(ctx, md5PublicKeyIdentification)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//TODO 暂定 没有用户名用公钥标识填充
 	if in.Name == "" {
-		in.Name = md5DeviceIdentification
+		in.Name = md5PublicKeyIdentification
 	}
 	// Name checks.
 	available, err = s.IsNameAvailable(ctx, in.Name)
@@ -82,45 +90,44 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		reqData model.DataToDevice
 	)
 	err = dao.User.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		reqData.Identification = md5DeviceIdentification
+		reqData.Identification = md5PublicKeyIdentification
 		reqData.SrcIdentification = in.Identification
 		reqData.Timestamp = nowTimestamp
 		reqData.Remark = in.Remark
 		if getUserId > 0 {
 			reqData.UserId = getUserId
-			if availableIsIdentification {
-				result, err = s.InsertDevice(ctx, tx, reqData)
-				//return nil, gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
-			}
-			if err != nil {
-				return err
-			}
+			//if availableIsUserIdentification {
+			//	result, err = s.InsertDevice(ctx, tx, reqData)
+			//	//return nil, gerror.Newf(`DeviceIdentification "%s" is already token by others`, in.Identification)
+			//}
+			//if err != nil {
+			//	return err
+			//}
 		} else {
-			//
 			rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
 			domain := in.Name + "." + rootDomainName.String()
 			result, err = dao.User.Ctx(ctx).Data(do.User{
-				Name:      in.Name,
-				PublicKey: in.PublicKey,
-				Domain:    domain,
-				Timestamp: nowTimestamp,
-				Remark:    in.Remark,
+				Name:           in.Name,
+				PublicKey:      in.PublicKey,
+				Domain:         domain,
+				Timestamp:      nowTimestamp,
+				Identification: in.Identification,
+				Remark:         in.Remark,
 			}).Insert()
 			if err != nil {
 				return err
 			}
-			// 同时入库device表
 			getUserId, err := result.LastInsertId()
 			if err != nil {
 				return err
 			}
 			reqData.UserId = uint32(getUserId)
-			if availableIsIdentification {
-				result, err = s.InsertDevice(ctx, tx, reqData)
-			}
-			if err != nil {
-				return err
-			}
+			//if availableIsUserIdentification {
+			//	result, err = s.InsertDevice(ctx, tx, reqData)
+			//	if err != nil {
+			//		return err
+			//	}
+			//}
 		}
 		return nil
 	})
@@ -128,7 +135,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		return nil, err
 	}
 	return &v1.ClientRegRes{
-		md5DeviceIdentification,
+		md5PublicKeyIdentification,
 		reqData.UserId}, err
 }
 
@@ -203,29 +210,29 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 	return entities, err
 }
 
-// GenerateMD5ByDeviceIdentification
+// GenerateMD5ByPublicKeyIdentification
 //
 //	@Description: 生成md5
 //	@receiver s
 //	@param identification
 //	@return string
 //	@return error
-func (s *sUser) GenerateMD5ByDeviceIdentification(identification string) (string, error) {
+func (s *sUser) GenerateMD5ByPublicKeyIdentification(identification string) (string, error) {
 	str, _ := gmd5.EncryptBytes([]byte(identification))
 	return str, nil
 }
 
-// IsIdentificationAvailable
+// IsUserIdentificationAvailable
 //
-//	@Description: 设备表是否有重复数据
+//	@Description: 用户表是否有重复数据
 //	@receiver s
 //	@param ctx
 //	@param identification
 //	@return bool
 //	@return error
-func (s *sUser) IsIdentificationAvailable(ctx context.Context, identification string) (bool, error) {
-	count, err := dao.Device.Ctx(ctx).Where(do.Device{
-		Identification: identification,
+func (s *sUser) IsUserIdentificationAvailable(ctx context.Context, identification string) (bool, error) {
+	count, err := dao.User.Ctx(ctx).Where(do.User{
+		Name: identification,
 	}).Count()
 	if err != nil {
 		return false, err
@@ -260,9 +267,9 @@ func (s *sUser) GetUserId(ctx context.Context, Name string) (uint32, error) {
 	return userId.Uint32(), nil
 }
 func (s *sUser) GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error) {
-	md5DeviceIdentification, _ := s.GenerateMD5ByDeviceIdentification(DeviceIdentification)
+	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(DeviceIdentification)
 	deviceId, err := dao.Device.Ctx(ctx).Fields("id").Where(do.Device{
-		Identification: md5DeviceIdentification,
+		Identification: md5PublicKeyIdentification,
 	}).Value()
 	if err != nil {
 		return 0, err
@@ -319,13 +326,13 @@ func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInp
 	}
 	//设备id
 	//getDeviceId, err = s.GetDeviceId(ctx, in.DeviceIdentification)
-	getDeviceId, err = s.GetDeviceId(ctx, in.PublicKey)
-	if err != nil {
-		return err
-	}
-	if getDeviceId == 0 {
-		return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
-	}
+	//getDeviceId, err = s.GetDeviceId(ctx, in.PublicKey)
+	//if err != nil {
+	//	return err
+	//}
+	//if getDeviceId == 0 {
+	//	return gerror.Newf(`The DeviceIdIdentification "%s" is not registered!`, in.DeviceIdentification)
+	//}
 	nowTimestamp := time.Now().Unix()
 
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {

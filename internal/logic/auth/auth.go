@@ -21,11 +21,11 @@ func New() service.IAuth {
 	return &sAuth{}
 }
 
-func (s *sAuth) GenToken(ctx context.Context, UserId uint32, DeviceIdentification string) (res *v1.ClientUserTokenDataRes) {
-	token, refreshToken, expireTime, _ := service.Middleware().GenToken(UserId, DeviceIdentification)
+func (s *sAuth) GenToken(ctx context.Context, UserId uint32, UserIdentification string) (res *v1.ClientUserTokenDataRes) {
+	token, refreshToken, expireTime, _ := service.Middleware().GenToken(UserId, UserIdentification)
 	res = new(v1.ClientUserTokenDataRes)
-	res.UserID = UserId
-	res.DeviceIdentification = DeviceIdentification
+	//res.UserID = UserId
+	res.UserIdentification = UserIdentification
 	res.Token = token
 	res.RefreshToken = refreshToken
 	res.NowTime = timeHelper.Date(timeHelper.Time(), consts.DefaultDateFormat)
@@ -49,8 +49,8 @@ func (s *sAuth) RefreshToken(ctx context.Context, req *v1.ClientRefreshTokenReq)
 	}
 
 	res = new(v1.ClientUserTokenDataRes)
-	res.UserID = refreshTokenRes.UserID
-	res.DeviceIdentification = refreshTokenRes.DeviceIdentification
+	//res.UserID = refreshTokenRes.UserID
+	res.UserIdentification = refreshTokenRes.UserIdentification
 	res.Token = refreshTokenRes.Token
 	res.RefreshToken = refreshTokenRes.RefreshToken
 	res.ExpireTime = timeHelper.Date(refreshTokenRes.ExpireTime, consts.DefaultDateFormat)
