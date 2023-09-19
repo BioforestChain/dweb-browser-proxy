@@ -1,5 +1,7 @@
 package v1
 
+// IpcReq
+// @Description:
 type IpcReq struct {
 	//g.Meta `path:"/ipc/test" tags:"IpcTestService" method:"get" summary:"test a new ipc"`
 	Header   string `v:"required"` //

@@ -21,6 +21,9 @@ func keyFunc(_ *jwt.Token) (i interface{}, err error) {
 }
 
 // JWTAuthMiddleware 基于JWT的认证中间件
+//
+//	@Description:
+//	@param r
 func JWTAuth(r *ghttp.Request) {
 	s := new(sMiddleware)
 	// 客户端携带Token 放在请求头
@@ -50,12 +53,21 @@ func JWTAuth(r *ghttp.Request) {
 	r.Middleware.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
 }
 
+// GenToken
+//
+//	@Description:
+//	@receiver s
+//	@param userID
+//	@param deviceIdentification
+//	@return string
+//	@return string
+//	@return int64
+//	@return error
 func (s *sMiddleware) GenToken(userID uint32, deviceIdentification string) (string, string, int64, error) {
 	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_token_expire")
 	JwtRefreshTokenExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_refresh_token_expire")
 	jwtExpireInt64 := jwtExpire.Int64()
 	JwtRefreshTokenExpireInt64 := JwtRefreshTokenExpire.Int64()
-
 	c := entity.MyClaims{
 		userID,
 		deviceIdentification,
@@ -68,7 +80,6 @@ func (s *sMiddleware) GenToken(userID uint32, deviceIdentification string) (stri
 	}
 	// 使用指定的签名方法创建签名对象
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(mySecret)
-
 	log.Println("AccessToken ExpiresAt:", jwt.NewNumericDate(time.Now().Add(consts.JwtTTLTimeUnit*time.Duration(jwtExpireInt64))))
 	// 使用指定的secret签名并获得完整的编码后的字符串token
 	rc := entity.MyClaims{
@@ -82,11 +93,16 @@ func (s *sMiddleware) GenToken(userID uint32, deviceIdentification string) (stri
 		},
 	}
 	refreshToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, rc).SignedString(mySecret)
-
 	return token, refreshToken, c.ExpiresAt.Unix(), nil
 }
 
 // ParseToken 解析JWT
+//
+//	@Description:
+//	@receiver s
+//	@param tokenString
+//	@return *entity.MyClaims
+//	@return error
 func (s *sMiddleware) ParseToken(tokenString string) (*entity.MyClaims, error) {
 	// 解析token
 	var mc = new(entity.MyClaims)
@@ -102,16 +118,24 @@ func (s *sMiddleware) ParseToken(tokenString string) (*entity.MyClaims, error) {
 }
 
 // RefreshToken 刷新AccessToken
+//
+//	@Description:
+//
 // 第一步 : 判断 refreshToken 格式对的，没有过期的
 // 第二步 : 判断 accessToken 格式对的，但是是过期的
 // 第三步 : 生成双 token
+//
+//	@receiver s
+//	@param accessToken
+//	@param refreshToken
+//	@return *v1.ClientUserRefreshTokenRes
+//	@return error
 func (s *sMiddleware) RefreshToken(accessToken, refreshToken string) (*v1.ClientUserRefreshTokenRes, error) {
 	// refresh token无效直接返回
 	if _, err := jwt.Parse(refreshToken, keyFunc); err != nil {
 		//return "", "", 0, 0, err
 		return nil, err
 	}
-
 	// 从旧access token中解析出claims数据
 	var claims entity.MyClaims
 	_, err := jwt.ParseWithClaims(accessToken, &claims, keyFunc)

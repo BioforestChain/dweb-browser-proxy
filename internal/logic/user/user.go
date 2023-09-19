@@ -26,6 +26,13 @@ func New() service.IUser {
 	return &sUser{}
 }
 
+// IsDomainExist
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return bool
 func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
 	count, err := dao.User.Ctx(ctx).Where(do.User{
 		Domain: in.Host,
@@ -35,6 +42,14 @@ func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool 
 	}
 	return count > 0
 }
+
+// IsDeviceExist
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return bool
 func (s *sUser) IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool {
 	count, err := dao.Device.Ctx(ctx).Where(do.Device{
 		Identification: in.DeviceIdentification,
@@ -55,14 +70,23 @@ func (s *sUser) IsUserExist(ctx context.Context, in model.CheckUserInput) bool {
 }
 
 // Create creates user account.
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return entity
+//	@return err
 func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
-	//domain
-	//公钥标识用户公钥生成
+	//公钥标识用户标识生成
 	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(in.PublicKey)
 	var (
 		available bool
 		getUserId uint32
+		result    sql.Result
+		reqData   model.DataToDevice
 	)
+	nowTimestamp := time.Now().Unix()
 	//availableIsUserIdentification, err := s.IsUserIdentificationAvailable(ctx, md5PublicKeyIdentification)
 	//if err != nil {
 	//	return nil, err
@@ -71,24 +95,18 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 	if in.Name == "" {
 		in.Name = md5PublicKeyIdentification
 	}
-	// Name checks.
-	available, err = s.IsNameAvailable(ctx, in.Name)
+	// UserIdentification checks.
+	available, err = s.IsUserIdentificationAvailable(ctx, md5PublicKeyIdentification)
 	if err != nil {
 		return nil, err
 	}
 	if !available {
 		//已存在的查出用户id
-		getUserId, err = s.GetUserId(ctx, in.Name)
+		getUserId, err = s.GetUserIdByIdentification(ctx, md5PublicKeyIdentification)
 		if err != nil {
 			return nil, err
 		}
-		//return gerror.Newf(`Name "%s" is already token by others`, in.Name)
 	}
-	nowTimestamp := time.Now().Unix()
-	var (
-		result  sql.Result
-		reqData model.DataToDevice
-	)
 	err = dao.User.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		reqData.Identification = md5PublicKeyIdentification
 		reqData.SrcIdentification = in.Identification
@@ -104,6 +122,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 			//	return err
 			//}
 		} else {
+			//domain  = root_domain
 			rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
 			domain := in.Name + "." + rootDomainName.String()
 			result, err = dao.User.Ctx(ctx).Data(do.User{
@@ -111,7 +130,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 				PublicKey:      in.PublicKey,
 				Domain:         domain,
 				Timestamp:      nowTimestamp,
-				Identification: in.Identification,
+				Identification: md5PublicKeyIdentification,
 				Remark:         in.Remark,
 			}).Insert()
 			if err != nil {
@@ -139,6 +158,15 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 		reqData.UserId}, err
 }
 
+// InsertDevice
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param tx
+//	@param reqData
+//	@return result
+//	@return err
 func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error) {
 	result, err = g.Model("device").TX(tx).Data(do.Device{
 		UserId:            reqData.UserId,
@@ -149,6 +177,16 @@ func (s *sUser) InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataT
 	}).Insert()
 	return result, err
 }
+
+// GetUserList
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return entities
+//	@return total
+//	@return err
 func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error) {
 	//condition := g.Map{
 	//	"name like ?": "%" + in.Name + "%",
@@ -162,8 +200,16 @@ func (s *sUser) GetUserList(ctx context.Context, in model.UserQueryInput) (entit
 	}
 	return entities, total, err
 }
+
+// GetDomainInfo
+//
+//	@Description: user 域名全局唯一
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return entities
+//	@return err
 func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error) {
-	//app 域名全局唯一
 	var (
 		getUserId  uint32
 		entityUser *v1.ClientDomainQueryRes
@@ -197,15 +243,12 @@ func (s *sUser) GetDomainInfo(ctx context.Context, in model.AppQueryInput) (enti
 	if err != nil {
 		return nil, err
 	}
-
 	if err = one.Struct(&entities); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-
 	if err = userInfo.Struct(&entityUser); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-
 	entities.Domain = entityUser.Domain
 	return entities, err
 }
@@ -232,7 +275,7 @@ func (s *sUser) GenerateMD5ByPublicKeyIdentification(identification string) (str
 //	@return error
 func (s *sUser) IsUserIdentificationAvailable(ctx context.Context, identification string) (bool, error) {
 	count, err := dao.User.Ctx(ctx).Where(do.User{
-		Name: identification,
+		Identification: identification,
 	}).Count()
 	if err != nil {
 		return false, err
@@ -240,7 +283,14 @@ func (s *sUser) IsUserIdentificationAvailable(ctx context.Context, identificatio
 	return count == 0, nil
 }
 
-// IsNameAvailable checks and returns given Name is available for signing up.
+// IsNameAvailable
+//
+//	@Description: IsNameAvailable checks and returns given Name is available for signing up.
+//	@receiver s
+//	@param ctx
+//	@param Name
+//	@return bool
+//	@return error
 func (s *sUser) IsNameAvailable(ctx context.Context, Name string) (bool, error) {
 	count, err := dao.User.Ctx(ctx).Where(do.User{
 		Name: Name,
@@ -266,6 +316,33 @@ func (s *sUser) GetUserId(ctx context.Context, Name string) (uint32, error) {
 	}
 	return userId.Uint32(), nil
 }
+
+// GetUserIdByIdentification
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param Identification
+//	@return uint32
+//	@return error
+func (s *sUser) GetUserIdByIdentification(ctx context.Context, Identification string) (uint32, error) {
+	userId, err := dao.User.Ctx(ctx).Fields("id").Where(do.User{
+		Identification: Identification,
+	}).Value()
+	if err != nil {
+		return 0, err
+	}
+	return userId.Uint32(), nil
+}
+
+// GetDeviceId
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param DeviceIdentification
+//	@return int
+//	@return error
 func (s *sUser) GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error) {
 	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(DeviceIdentification)
 	deviceId, err := dao.Device.Ctx(ctx).Fields("id").Where(do.Device{
@@ -305,18 +382,9 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 //	@return error
 func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error) {
 	var (
-		//available   bool
 		getUserId   uint32
 		getDeviceId int
 	)
-	//// domain checks.
-	//available, err = s.IsDomainAvailable(ctx, in.Domain)
-	//if err != nil {
-	//	return err
-	//}
-	//if !available {
-	//	return gerror.Newf(`Domain "%s" is already token by others`, in.Domain)
-	//}
 	getUserId, err = s.GetUserId(ctx, in.UserName)
 	if err != nil {
 		return err
@@ -325,7 +393,6 @@ func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInp
 		return gerror.Newf(`UserName "%s" is not registered!`, in.UserName)
 	}
 	nowTimestamp := time.Now().Unix()
-
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
 		_, err = dao.App.Ctx(ctx).Data(do.App{
 			UserId:         getUserId,

@@ -15,12 +15,15 @@ type Response struct {
 	Data    interface{} `json:"data"    dc:"返回的数据"`
 }
 
+// ResponseHandler
+//
+//	@Description:
+//	@param r
 func ResponseHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.BufferLength() > 0 {
 		return
 	}
-
 	var (
 		res  = r.GetHandlerResponse()
 		err  = r.GetError()
