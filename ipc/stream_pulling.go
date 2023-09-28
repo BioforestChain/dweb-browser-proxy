@@ -1,9 +1,11 @@
 package ipc
 
+import "fmt"
+
 type StreamPulling struct {
 	Type      MessageType
 	StreamID  string
-	bandwidth *int
+	Bandwidth *int
 }
 
 // NewStreamPulling
@@ -18,9 +20,13 @@ func NewStreamPulling(streamID string, bandwidth *int) *StreamPulling {
 	}
 
 	if bandwidth == nil {
-		*sp.bandwidth = 0
+		sp.Bandwidth = new(int)
 	} else {
-		sp.bandwidth = bandwidth
+		sp.Bandwidth = bandwidth
 	}
 	return sp
+}
+
+func (s *StreamPulling) String() string {
+	return fmt.Sprintf("StreamPulling - Type: %d, StreamID: %s, Bandwidth: %p", s.Type, s.StreamID, s.Bandwidth)
 }

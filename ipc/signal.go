@@ -12,11 +12,11 @@ type Signal struct {
 	mutex      sync.Mutex
 }
 
-type Observer func(req interface{}, ipc IPC)
+type Observer func(data interface{}, ipc IPC)
 
 type emitArgs struct {
-	req interface{}
-	ipc IPC
+	data interface{}
+	ipc  IPC
 }
 
 func NewSignal(autoStart bool) *Signal {
@@ -36,7 +36,7 @@ func (s *Signal) start() {
 	s.started = true
 	if len(s.cachedEmit) > 0 {
 		for _, args := range s.cachedEmit {
-			s.emit(args.req, args.ipc)
+			s.emit(args.data, args.ipc)
 		}
 		s.cachedEmit = make([]emitArgs, 0)
 	}
@@ -53,20 +53,20 @@ func (s *Signal) Listen(observer Observer) func() {
 	}
 }
 
-func (s *Signal) Emit(req interface{}, ipc IPC) {
+func (s *Signal) Emit(data interface{}, ipc IPC) {
 	if s.started {
-		s.emit(req, ipc)
+		s.emit(data, ipc)
 	} else {
 		s.mutex.Lock()
-		s.cachedEmit = append(s.cachedEmit, emitArgs{req, ipc})
+		s.cachedEmit = append(s.cachedEmit, emitArgs{data, ipc})
 		s.mutex.Unlock()
 	}
 }
 
-func (s *Signal) emit(req interface{}, ipc IPC) {
+func (s *Signal) emit(data interface{}, ipc IPC) {
 	for _, ob := range s.observers {
 		go func(observer Observer) {
-			observer(req, ipc)
+			observer(data, ipc)
 		}(ob)
 	}
 }

@@ -29,7 +29,7 @@ func NewRequest(id uint64, url string, method METHOD, header Header, body BodyIn
 	}
 
 	if bodySender, ok := body.(*BodySender); ok {
-		usableByIpc(ipc, bodySender)
+		UsableByIpc(ipc, bodySender)
 	}
 
 	return req

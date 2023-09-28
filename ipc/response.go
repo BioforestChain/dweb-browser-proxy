@@ -17,7 +17,7 @@ type Response struct {
 
 func NewResponse(reqID uint64, statusCode int, header Header, body BodyInter, ipc IPC) *Response {
 	if bodySender, ok := body.(*BodySender); ok {
-		usableByIpc(ipc, bodySender)
+		UsableByIpc(ipc, bodySender)
 	}
 
 	return &Response{Type: RESPONSE, ReqID: reqID, StatusCode: statusCode, Header: header, Body: body, Ipc: ipc}
@@ -58,6 +58,12 @@ func FromResponseBinary(reqID uint64, statusCode int, header Header, binary []by
 	body := FromBodySenderBinary(binary, ipc)
 
 	return NewResponse(reqID, statusCode, header, body, ipc)
+}
+
+func FromResponseStream(reqID uint64, statusCode int, header Header, stream *ReadableStream, ipc IPC) *Response {
+	header.init("Content-Type", "application/octet-stream")
+
+	return NewResponse(reqID, statusCode, header, FromBodySenderStream(stream, ipc), ipc)
 }
 
 type ResMessage struct {

@@ -2,7 +2,9 @@ package ipc
 
 import (
 	"errors"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	"time"
 )
 
 var ErrUnMarshalObjectToIpcMessage = errors.New("unmarshal message failed when object to IpcMessage")
@@ -11,7 +13,7 @@ func objectToIpcMessage(data []byte, ipc IPC) (msg interface{}, err error) {
 	var m = struct {
 		Type      MessageType
 		Name      string
-		Data      string
+		Data      []byte
 		Encoding  DataEncoding
 		StreamID  string
 		Bandwidth *int
@@ -38,6 +40,7 @@ func objectToIpcMessage(data []byte, ipc IPC) (msg interface{}, err error) {
 			FromBodyReceiver(reqMsg.MetaBody, ipc),
 			ipc,
 		)
+		fmt.Printf("%s Input-> Request: %+v\n", time.Now(), msg)
 	case RESPONSE:
 		var resMsg ResMessage
 		if err = json.Unmarshal(data, &resMsg); err != nil {
@@ -50,18 +53,25 @@ func objectToIpcMessage(data []byte, ipc IPC) (msg interface{}, err error) {
 			FromBodyReceiver(resMsg.MetaBody, ipc),
 			ipc,
 		)
+		fmt.Printf("%s Input-> Response: %+v\n", time.Now(), msg)
 	case EVENT:
 		msg = NewEvent(m.Name, m.Data, m.Encoding)
 	case STREAM_DATA:
-		msg = NewStreamData(m.StreamID, m.Data, m.Encoding)
+		v := NewStreamData(m.StreamID, m.Data, m.Encoding)
+		msg = v
+		fmt.Printf("%s Input-> %+v\n", time.Now(), v)
 	case STREAM_PULLING:
 		msg = NewStreamPulling(m.StreamID, m.Bandwidth)
+		fmt.Printf("%s Input-> %+v\n", time.Now(), msg)
 	case STREAM_PAUSED:
 		msg = NewStreamPaused(m.StreamID, m.Bandwidth)
+		fmt.Printf("%s Input-> %+v\n", time.Now(), msg)
 	case STREAM_ABORT:
 		msg = NewStreamAbort(m.StreamID)
+		fmt.Printf("%s Input-> %+v\n", time.Now(), msg)
 	case STREAM_END:
 		msg = NewStreamEnd(m.StreamID)
+		fmt.Printf("%s Input-> %+v\n", time.Now(), msg)
 	}
 
 	return

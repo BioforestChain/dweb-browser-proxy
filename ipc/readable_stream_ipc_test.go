@@ -20,7 +20,7 @@ func TestReadableStreamIPC_NewReadableStreamIPCWithDefaultInputStream(t *testing
 
 	req := request()
 
-	_ = readableStreamIpc.Enqueue(req)
+	_ = readableStreamIpc.EnqueueToInputStream(req)
 }
 
 func TestReadableStreamIPC_postMessage(t *testing.T) {

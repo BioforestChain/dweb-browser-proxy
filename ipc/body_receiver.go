@@ -1,6 +1,7 @@
 package ipc
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -16,15 +17,15 @@ func NewBodyReceiver(metaBody *MetaBody, ipc IPC) *BodyReceiver {
 			panic("MetaBody stream id is empty")
 		}
 		metaID := fmt.Sprintf("%d/%s", metaBody.SenderUID, metaBody.StreamID)
-		if _, ok := metaId_receiverIpc_Map[metaID]; !ok {
+		if _, ok := metaIDReceiverIpcMap[metaID]; !ok {
 			ipc.OnClose(func(req interface{}, ipc IPC) {
-				delete(metaId_receiverIpc_Map, metaID)
+				delete(metaIDReceiverIpcMap, metaID)
 			})
-			metaId_receiverIpc_Map[metaID] = ipc
+			metaIDReceiverIpcMap[metaID] = ipc
 			metaBody.ReceiverUID = ipc.GetUID()
 		}
 
-		receiver, ok := metaId_receiverIpc_Map[metaID]
+		receiver, ok := metaIDReceiverIpcMap[metaID]
 		if !ok {
 			panic(fmt.Sprintf("no found ipc by metaID: %s", metaID))
 		}
@@ -52,7 +53,7 @@ func NewBodyReceiver(metaBody *MetaBody, ipc IPC) *BodyReceiver {
 
 // FromBodyReceiver 返回值 *BodySender | *BodyReceiver
 func FromBodyReceiver(metaBody *MetaBody, ipc IPC) BodyInter {
-	if br, ok := metaId_ipcBodySender_Map[metaBody.MetaID]; ok {
+	if br, ok := metaIDIpcBodySenderMap[metaBody.MetaID]; ok {
 		return br
 	} else {
 		return NewBodyReceiver(metaBody, ipc)
@@ -60,6 +61,56 @@ func FromBodyReceiver(metaBody *MetaBody, ipc IPC) BodyInter {
 }
 
 func metaToStream(metaBody *MetaBody, ipc IPC) *ReadableStream {
-	// TODO 待实现
-	return NewReadableStream()
+	streamIPC := ipc
+	if streamIPC == nil {
+		panic("miss ipc when ipc-response has stream-body")
+	}
+
+	streamID := metaBody.StreamID
+	paused := true
+
+	onStart := func(ctrl *ReadableStreamDefaultController) {
+		// ipc 一旦关闭，这个流也要关闭，因为只有这个ipc能为它提供数据
+		streamIPC.OnClose(func(data interface{}, ipc IPC) {
+			ctrl.Close()
+		})
+
+		firstData := DataToBinary(metaBody.Data, metaBody.typeEncoding())
+		if firstData != nil {
+			_ = ctrl.Enqueue(firstData)
+		}
+
+		var unListen Observer
+		unListen = streamIPC.OnStream(func(data interface{}, ipc IPC) {
+			if streamMsg, ok := IsStream(data); ok && streamMsg.StreamID == streamID {
+				switch streamMsg.Type {
+				case STREAM_DATA:
+					if d := DataToBinary(streamMsg.Data, streamMsg.Encoding); d != nil {
+						_ = ctrl.Enqueue(d)
+					}
+				case STREAM_END:
+					ctrl.Close()
+					unListen(nil, nil)
+				}
+			}
+		})
+	}
+
+	onPull := func(ctrl *ReadableStreamDefaultController) {
+		if paused {
+			paused = false
+			_ = streamIPC.PostMessage(context.Background(), NewStreamPulling(streamID, nil))
+		}
+	}
+
+	onCancel := func() {
+		_ = streamIPC.PostMessage(context.Background(), NewStreamAbort(streamID))
+	}
+
+	// HighWaterMark=0，防止立即拉取stream
+	return NewReadableStream(
+		WithOnStart(onStart),
+		WithOnPull(onPull),
+		WithOnCancel(onCancel),
+		WithHighWaterMark(0))
 }

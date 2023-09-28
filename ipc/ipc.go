@@ -18,8 +18,9 @@ type IPC interface {
 	GetUID() uint64
 	GetSupportBinary() bool
 	OnClose(observer Observer)
+	OnStream(observer Observer) Observer
 	Close()
-	GetOutputStreamReader() *ReadableStreamDefaultReader
+	GetOutputStreamReader() ReadableStreamReader
 }
 
 type BaseIPC struct {
@@ -40,7 +41,7 @@ type BaseIPC struct {
 
 	postMessage           func(ctx context.Context, msg interface{}) error // msg发送至outputStream
 	doClose               func()                                           // inputStream被关闭时，需要close outputStream
-	getOutputStreamReader func() *ReadableStreamDefaultReader              // 获取outputStream reader
+	getOutputStreamReader func() ReadableStreamReader                      // 获取outputStream reader
 
 	listenRequestOnce, listenResponseOnce, listenStreamOnce sync.Once
 }
@@ -69,7 +70,7 @@ func NewBaseIPC(opts ...Option) *BaseIPC {
 	ipc.msgSignal = ipc.createSignal(false)
 
 	if ipc.reqTimeout == 0 {
-		ipc.reqTimeout = 30 * time.Second
+		ipc.reqTimeout = 300 * time.Second
 	}
 
 	return ipc
@@ -115,7 +116,7 @@ func (bipc *BaseIPC) PostMessage(ctx context.Context, msg interface{}) error {
 	return bipc.postMessage(ctx, msg)
 }
 
-func (bipc *BaseIPC) GetOutputStreamReader() *ReadableStreamDefaultReader {
+func (bipc *BaseIPC) GetOutputStreamReader() ReadableStreamReader {
 	return bipc.getOutputStreamReader()
 }
 
@@ -143,23 +144,24 @@ func (bipc *BaseIPC) OnFetch() {
 	// TODO 待实现
 }
 
-func (bipc *BaseIPC) OnStream(observer Observer) {
+func (bipc *BaseIPC) OnStream(observer Observer) Observer {
 	bipc.listenStreamOnce.Do(func() {
 		bipc.streamSignal = func() *Signal {
 			signal := bipc.createSignal(false)
 			bipc.OnMessage(func(req interface{}, ipc IPC) {
-				// TODO 待实现
-				//if reqStr, ok := req.(string); ok {
-				//	if strings.Contains(reqStr, "stream_id") {
-				//		signal.Emit(req, ipc)
-				//	}
-				//}
+				if _, ok := IsStream(req); ok {
+					signal.Emit(req, ipc)
+				}
 			})
 			return signal
 		}()
 	})
 
-	bipc.streamSignal.Listen(observer)
+	unListen := bipc.streamSignal.Listen(observer)
+
+	return func(data interface{}, ipc IPC) {
+		unListen()
+	}
 }
 
 func (bipc *BaseIPC) OnClose(observer Observer) {
@@ -296,7 +298,7 @@ func WithDoClose(doClose func()) Option {
 	}
 }
 
-func WithStreamReader(getOutputStreamReader func() *ReadableStreamDefaultReader) Option {
+func WithStreamReader(getOutputStreamReader func() ReadableStreamReader) Option {
 	return func(ipc *BaseIPC) {
 		ipc.getOutputStreamReader = getOutputStreamReader
 	}

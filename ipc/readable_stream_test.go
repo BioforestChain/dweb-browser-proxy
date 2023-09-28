@@ -3,6 +3,7 @@ package ipc
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -224,6 +225,45 @@ func TestReadableStream_onPull(t *testing.T) {
 			t.Fatal("onPull failed")
 		}
 	})
+
+	t.Run("onPull will not be executed by default when highWaterMark is 0", func(t *testing.T) {
+		var called int
+
+		done := make(chan struct{})
+
+		// highWaterMark==0时，初始化readableStream时，不会触发onPull
+		rs := NewReadableStream(
+			WithHighWaterMark(0),
+			WithOnPull(func(ctrl *ReadableStreamDefaultController) {
+				called++
+				done <- struct{}{}
+			}),
+		)
+
+		time.Sleep(time.Millisecond * 10)
+
+		go func() {
+			// highWaterMark==0时，入队不会触发onPull
+			_ = rs.Enqueue([]byte("hi"))
+		}()
+
+		time.Sleep(time.Millisecond * 10)
+
+		if called != 0 {
+			t.Fatal("onPull failed")
+		}
+
+		// read时会触发onPull，不管highWaterMark值是多少
+		_, _ = rs.GetReader().Read()
+
+		<-done
+
+		if called != 1 {
+			fmt.Println("called： ", called)
+			t.Fatal("onPull failed")
+		}
+	})
+
 }
 
 func TestReadableStream_GetReader(t *testing.T) {

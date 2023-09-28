@@ -1,5 +1,7 @@
 package ipc
 
+import "fmt"
+
 type StreamPaused struct {
 	Type     MessageType
 	StreamID string
@@ -24,4 +26,8 @@ func NewStreamPaused(streamID string, fuse *int) *StreamPaused {
 		sp.fuse = fuse
 	}
 	return sp
+}
+
+func (s *StreamPaused) String() string {
+	return fmt.Sprintf("StreamPaused - Type: %d, StreamID: %s, fuse: %p", s.Type, s.StreamID, s.fuse)
 }

@@ -32,7 +32,7 @@ type ReadableStream struct {
 	Controller    *ReadableStreamDefaultController
 	cancelChan    chan struct{} // used when stream or reader calls Cancel
 	canceled      bool          // true when stream or reader Cancel
-	pullChan      chan struct{}
+	pullChan      chan int      // 0表示enqueue时，触发pull；1表示read时，触发pull
 	pullClosed    bool
 }
 
@@ -69,20 +69,20 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	}
 
 	if stream.onPull != nil {
-		stream.pullChan = make(chan struct{}, 1)
+		stream.pullChan = make(chan int, 1)
 
 		go func() {
-			stream.pulling()
+			stream.pulling(0)
 
 			for {
 				select {
 				case <-stream.cancelChan:
 					return
-				case _, ok := <-stream.pullChan:
+				case trigger, ok := <-stream.pullChan:
 					if !ok {
 						return
 					}
-					stream.pulling()
+					stream.pulling(trigger)
 				}
 			}
 		}()
@@ -103,7 +103,7 @@ func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	return stream
 }
 
-func (stream *ReadableStream) GetReader() *ReadableStreamDefaultReader {
+func (stream *ReadableStream) GetReader() ReadableStreamReader {
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
 
@@ -159,16 +159,16 @@ func (stream *ReadableStream) cancel() {
 	}
 }
 
-func (stream *ReadableStream) pull() {
+func (stream *ReadableStream) pull(trigger int) {
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
 
 	if stream.pullChan != nil && len(stream.pullChan) == 0 && !stream.pullClosed {
-		stream.pullChan <- struct{}{}
+		stream.pullChan <- trigger
 	}
 }
 
-func (stream *ReadableStream) pulling() {
+func (stream *ReadableStream) pulling(trigger int) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("ReadableStream pull panic: ", err)
@@ -176,7 +176,7 @@ func (stream *ReadableStream) pulling() {
 	}()
 
 	v := stream.Controller.desiredSize()
-	if v > 0 && stream.onPull != nil {
+	if trigger == 1 || (v > 0 && stream.onPull != nil) {
 		stream.onPull(stream.Controller)
 	}
 }
@@ -205,7 +205,7 @@ func (ctrl *ReadableStreamDefaultController) Enqueue(data []byte) (err error) {
 
 	ctrl.stream.dataChan <- data
 
-	ctrl.stream.pull()
+	ctrl.stream.pull(0)
 	return
 }
 
@@ -220,6 +220,24 @@ func (ctrl *ReadableStreamDefaultController) Close() {
 
 func (ctrl *ReadableStreamDefaultController) desiredSize() int {
 	return int(*ctrl.stream.highWaterMark) - ctrl.stream.Len()
+}
+
+type ReadableStreamReader interface {
+	// Read the next chunk in the stream's internal queue.
+	Read() (*StreamResult, error)
+
+	// Cancel Calling this method signals a loss of interest in the stream by a consumer.
+	// Cancel is used when you've completely finished with the stream and don't need any more data from it,
+	// even if there are chunks enqueued waiting to be read.
+	// That data is lost after cancel is called, and the stream is not readable any more.
+	// To read those chunks still and not completely get rid of the stream,
+	// you'd use ReadableStreamDefaultController.Close().
+	//
+	// If the reader is active, the cancel() method behaves the same
+	// as that for the associated stream (ReadableStream.Cancel()).
+	Cancel()
+
+	ReleaseLock()
 }
 
 type ReadableStreamDefaultReader struct {
@@ -241,7 +259,7 @@ func (reader *ReadableStreamDefaultReader) Read() (*StreamResult, error) {
 		return &StreamResult{Done: true, Value: nil}, nil
 	}
 
-	reader.stream.pull()
+	reader.stream.pull(1)
 
 	data, ok := <-reader.stream.dataChan
 	if !ok {
@@ -252,15 +270,6 @@ func (reader *ReadableStreamDefaultReader) Read() (*StreamResult, error) {
 	return &StreamResult{Done: false, Value: data}, nil
 }
 
-// Cancel Calling this method signals a loss of interest in the stream by a consumer.
-// Cancel is used when you've completely finished with the stream and don't need any more data from it,
-// even if there are chunks enqueued waiting to be read.
-// That data is lost after cancel is called, and the stream is not readable any more.
-// To read those chunks still and not completely get rid of the stream,
-// you'd use ReadableStreamDefaultController.Close().
-//
-// If the reader is active, the cancel() method behaves the same
-// as that for the associated stream (ReadableStream.Cancel()).
 func (reader *ReadableStreamDefaultReader) Cancel() {
 	reader.stream.close()
 	reader.stream.cancel()
