@@ -176,12 +176,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	if client == nil {
 		return nil, errors.New("the service is unavailable")
 	}
-	// Verify req.Host exists in the database
-	valCheckUrl := service.User().IsDomainExist(ctx, model.CheckUrlInput{Host: req.Host})
-	if !valCheckUrl {
-		log.Println(gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host))
-		return nil, gerror.Newf(`Sorry, your domain name "%s" is not registered yet`, req.Host)
-	}
 	// Verify req.ClientID exists in the database
 	valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
 	if !valCheckUser {
