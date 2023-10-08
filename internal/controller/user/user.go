@@ -8,12 +8,41 @@ import (
 	commonLogic "proxyServer/internal/logic"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
+	"strconv"
 )
 
 type Controller struct{}
 
 func New() *Controller {
 	return &Controller{}
+}
+
+// ClientDomain
+//
+//	@Description: todo ttl 入参?
+//	@receiver c
+//	@param ctx
+//	@param req
+//	@return res
+//	@return err
+func (c *Controller) ClientDomain(ctx context.Context, req *v1.ClientDomainRegReq) (res *v1.ClientRegRes, err error) {
+	gRequestData := g.RequestFromCtx(ctx)
+	userID := gRequestData.GetHeader("userID")
+	if err := g.Validator().Data(req).Run(ctx); err != nil {
+		fmt.Println("ClientDomainReg Validator", err)
+	}
+	tmpUserId, _ := strconv.Atoi(userID)
+	getUserId := uint32(tmpUserId)
+	err = service.User().CreateDomainInfo(ctx, model.UserAppInfoCreateInput{
+		UserId:            getUserId,
+		UserName:          req.UserName,
+		AppIdentification: req.AppIdentification,
+		PublicKey:         req.PublicKey,
+		AppName:           req.AppName,
+		Remark:            req.Remark,
+		Subdomain:         req.Subdomain,
+	})
+	return
 }
 
 // ClientAppInfoReport

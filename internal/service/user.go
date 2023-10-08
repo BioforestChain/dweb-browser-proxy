@@ -8,10 +8,6 @@ package service
 import (
 	"context"
 	"database/sql"
-
-	//"github.com/gogf/gf/v2/frame/g"
-
-	//"github.com/gogf/gf/v2/frame/g"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
@@ -21,9 +17,10 @@ import (
 
 type (
 	IUser interface {
-		IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool
+		IsDomainExist(ctx context.Context, in model.CheckDomainInput) bool
+		IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool
 		IsUserExist(ctx context.Context, in model.CheckUserInput) bool
-		Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
+		CreateUser(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
 		InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error)
 		GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error)
 		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error)
@@ -31,8 +28,10 @@ type (
 		IsUserIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)
 		GetUserId(ctx context.Context, Name string) (uint32, error)
+		GetUserIdByIdentification(ctx context.Context, Identification string) (uint32, error)
 		GetDeviceId(ctx context.Context, DeviceIdentification string) (int, error)
 		IsDomainAvailable(ctx context.Context, domain string) (bool, error)
+		CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error)
 		CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error)
 	}
 )

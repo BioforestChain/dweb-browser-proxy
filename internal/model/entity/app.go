@@ -14,6 +14,7 @@ type App struct {
 	UserId         int64       `json:"userId"         description:"用户id"`
 	DeviceId       int64       `json:"deviceId"       description:"设备id"`
 	Name           string      `json:"name"           description:"名称"`
+	Domain         string      `json:"domain"         description:"域名"`
 	Identification string      `json:"identification" description:"app唯一标识"`
 	Remark         string      `json:"remark"         description:"备注信息"`
 	Timestamp      string      `json:"timestamp"      description:"时间戳"`
@@ -22,4 +23,5 @@ type App struct {
 	DeletedAt      *gtime.Time `json:"deletedAt"      description:"Deleted Time"`
 	CumReqNum      int         `json:"cumReqNum"      description:"累计被请求次数"`
 	IsInstall      int         `json:"isInstall"      description:"是否安装：1安装0（未安装）卸载"`
+	PublicKey      string      `json:"publicKey"      description:"公钥"`
 }

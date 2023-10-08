@@ -9,10 +9,10 @@ import (
 )
 
 func main() {
-	url := "ws://127.0.0.1:8000/ws?client_id=8cb46dde8d8edb41994e0b88f87a31dc"
+	url := "ws://127.0.0.1:8000/ws?client_id=f544391c9215a6bfbb6f573b25c40d38"
 	conn, res, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
-		log.Fatalln("Error connecting to server: ", err)
+		log.Println("Error connecting to server: ", err)
 	}
 	defer conn.Close()
 

@@ -21,7 +21,7 @@ func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *
 	//isValid := validate.Var(req.Name, "alphanum").Error()
 	//fmt.Printf("%s is alphanumeric: %t\n", req.Name, isValid)
 	var (
-		rule = `regex:^[a-zA-Z0-9]{6,32}$|max-length:32`
+		rule = `regex:^[a-zA-Z0-9]{3,32}$|max-length:32`
 	)
 	if err := g.Validator().Rules(rule).Data(req.Name).Run(ctx); err != nil {
 		fmt.Println("clientReg Name Validator", err.Error())
@@ -30,10 +30,10 @@ func (c *Controller) ClientReg(ctx context.Context, req *v1.ClientRegReq) (res *
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("clientReg Validator", err)
 	}
-	newOne, err := service.User().Create(ctx, model.UserCreateInput{
-		Name:      req.Name,
-		PublicKey: req.PublicKey,
-		Remark:    req.Remark,
+	newOne, err := service.User().CreateUser(ctx, model.UserCreateInput{
+		Name:    req.Name,
+		UserKey: req.UserKey,
+		Remark:  req.Remark,
 	})
 	if err != nil {
 		return

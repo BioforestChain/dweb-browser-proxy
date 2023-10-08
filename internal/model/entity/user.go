@@ -18,6 +18,6 @@ type User struct {
 	CreatedAt      *gtime.Time `json:"createdAt"      description:"Created Time"`
 	UpdateAt       *gtime.Time `json:"updateAt"       description:"Updated Time"`
 	DeletedAt      *gtime.Time `json:"deletedAt"      description:"Deleted Time"`
-	PublicKey      string      `json:"publicKey"      description:""`
+	UserKey        string      `json:"userKey"        description:""`
 	Identification string      `json:"identification" description:"用户id"`
 }

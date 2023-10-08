@@ -24,6 +24,7 @@ type AppColumns struct {
 	UserId         string // 用户id
 	DeviceId       string // 设备id
 	Name           string // 名称
+	Domain         string // 域名
 	Identification string // app唯一标识
 	Remark         string // 备注信息
 	Timestamp      string // 时间戳
@@ -32,6 +33,7 @@ type AppColumns struct {
 	DeletedAt      string // Deleted Time
 	CumReqNum      string // 累计被请求次数
 	IsInstall      string // 是否安装：1安装0（未安装）卸载
+	PublicKey      string // 公钥
 }
 
 // appColumns holds the columns for table app.
@@ -40,6 +42,7 @@ var appColumns = AppColumns{
 	UserId:         "user_id",
 	DeviceId:       "device_id",
 	Name:           "name",
+	Domain:         "domain",
 	Identification: "identification",
 	Remark:         "remark",
 	Timestamp:      "timestamp",
@@ -48,6 +51,7 @@ var appColumns = AppColumns{
 	DeletedAt:      "deleted_at",
 	CumReqNum:      "cum_req_num",
 	IsInstall:      "is_install",
+	PublicKey:      "public_key",
 }
 
 // NewAppDao creates and returns a new DAO object for table data access.

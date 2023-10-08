@@ -20,6 +20,6 @@ type User struct {
 	CreatedAt      *gtime.Time // Created Time
 	UpdateAt       *gtime.Time // Updated Time
 	DeletedAt      *gtime.Time // Deleted Time
-	PublicKey      interface{} //
+	UserKey        interface{} //
 	Identification interface{} // 用户id
 }

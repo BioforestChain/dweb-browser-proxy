@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"log"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model"
@@ -33,9 +34,9 @@ func New() service.IUser {
 //	@param ctx
 //	@param in
 //	@return bool
-func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckUrlInput) bool {
-	count, err := dao.User.Ctx(ctx).Where(do.User{
-		Domain: in.Host,
+func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckDomainInput) bool {
+	count, err := dao.User.Ctx(ctx).Where(do.App{
+		Domain: in.Domain,
 	}).Count()
 	if err != nil {
 		return false
@@ -69,7 +70,7 @@ func (s *sUser) IsUserExist(ctx context.Context, in model.CheckUserInput) bool {
 	return count > 0
 }
 
-// Create creates user account.
+// Create user account.
 //
 //	@Description:
 //	@receiver s
@@ -77,9 +78,9 @@ func (s *sUser) IsUserExist(ctx context.Context, in model.CheckUserInput) bool {
 //	@param in
 //	@return entity
 //	@return err
-func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
-	//公钥标识用户标识生成
-	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(in.PublicKey)
+func (s *sUser) CreateUser(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error) {
+	//用户key标识用户标识生成
+	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(in.UserKey)
 	var (
 		available bool
 		getUserId uint32
@@ -91,7 +92,7 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 	//if err != nil {
 	//	return nil, err
 	//}
-	//TODO 暂定 没有用户名用公钥标识填充
+	//TODO 暂定 没有用户名用用户key标识填充
 	if in.Name == "" {
 		in.Name = md5PublicKeyIdentification
 	}
@@ -122,13 +123,13 @@ func (s *sUser) Create(ctx context.Context, in model.UserCreateInput) (entity *v
 			//	return err
 			//}
 		} else {
-			//domain  = root_domain
-			rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
-			domain := in.Name + "." + rootDomainName.String()
+			////domain  = root_domain
+			//rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+			//domain := in.Name + "." + rootDomainName.String()
 			result, err = dao.User.Ctx(ctx).Data(do.User{
-				Name:           in.Name,
-				PublicKey:      in.PublicKey,
-				Domain:         domain,
+				Name:    in.Name,
+				UserKey: in.UserKey,
+				//Domain:         domain,
 				Timestamp:      nowTimestamp,
 				Identification: md5PublicKeyIdentification,
 				Remark:         in.Remark,
@@ -363,7 +364,7 @@ func (s *sUser) GetDeviceId(ctx context.Context, DeviceIdentification string) (i
 //	@return bool
 //	@return error
 func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, error) {
-	count, err := dao.App.Ctx(ctx).Where(do.User{
+	count, err := dao.App.Ctx(ctx).Where(do.App{
 		Domain: domain,
 	}).Count()
 	if err != nil {
@@ -372,14 +373,60 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 	return count == 0, nil
 }
 
-// CreateAppInfo
+// CreateDomainInfo
 //
-//	@Description: 注册域名
+//	@Description: 注册域名信息
 //	@receiver s
 //	@param ctx
 //	@param Name
 //	@return int
 //	@return error
+func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error) {
+	//公钥标识-->域名标识生成
+	md5PublicKeyIdentification, _ := s.GenerateMD5ByPublicKeyIdentification(in.PublicKey)
+	var (
+		getUserId   uint32
+		getDeviceId int
+	)
+	getUserId = in.UserId
+	nowTimestamp := time.Now().Unix()
+	//TODO 暂定 没有用户名用公钥标识填充
+	if in.Subdomain == "" {
+		in.Subdomain = md5PublicKeyIdentification
+	}
+	//domain  = root_domain
+	rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+	domain := in.Subdomain + "." + rootDomainName.String()
+	// Verify domain exists in the database
+	valCheckDomain := service.User().IsDomainExist(ctx, model.CheckDomainInput{Domain: domain})
+	if !valCheckDomain {
+		log.Println(gerror.Newf(`Sorry, your domain "%s" has been registered yet`, domain))
+		return gerror.Newf(`Sorry, your user "%s" has been registered yet`, domain)
+	}
+
+	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
+		_, err = dao.App.Ctx(ctx).Data(do.App{
+			UserId:         getUserId,
+			DeviceId:       getDeviceId,
+			Domain:         domain,
+			Name:           in.AppName,
+			Identification: in.AppIdentification,
+			Timestamp:      nowTimestamp,
+			Remark:         in.Remark,
+			PublicKey:      in.PublicKey,
+		}).Insert()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+} // CreateAppInfo
+// @Description: 记录App（模块）安装信息
+// @receiver s
+// @param ctx
+// @param Name
+// @return int
+// @return error
 func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error) {
 	var (
 		getUserId   uint32

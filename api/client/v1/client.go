@@ -11,10 +11,22 @@ import (
 // 1. 用户注册
 // 1.1 设备表，一个用户可以有多个设备(暂定)
 type ClientRegReq struct {
-	g.Meta    `path:"/pre-user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
-	Name      string ``             //用户名，昵称可填可不填
-	PublicKey string `v:"required"` //公钥
-	Remark    string
+	g.Meta  `path:"/pre-user/client-reg" tags:"ClientRegService" method:"post" summary:"Sign up a new client"`
+	Name    string ``             //用户名，昵称可填可不填
+	UserKey string `v:"required"` //dweb中key模块申请的类uuid的字符串
+	Remark  string
+}
+
+// ClientDomainReg
+type ClientDomainRegReq struct {
+	g.Meta            `path:"/user/client-domain-reg" tags:"ClientDomainRegService" method:"post" summary:"A new client domain registration"`
+	UserName          string `v:""`         //用户名称
+	AppName           string `v:"required"` //app名称
+	AppIdentification string `v:"required"` //app唯一标识
+	Subdomain         string `v:""`         //域名 todo 系统分配
+	PublicKey         string `v:"required"` //公钥
+	TTL               uint32 `v:""`         //存活时间
+	Remark            string
 }
 
 // ClientAppInfoReportReq
@@ -83,7 +95,7 @@ type ClientQueryListRes struct {
 // @Description:
 type ClientRefreshTokenReq struct {
 	g.Meta       `path:"/user/client-refresh-token" tags:"ClientRefreshTokenService" method:"get" summary:"Get client refresh token"`
-	AccessToken  string `v:"required",json:"token"`
+	AccessToken  string `v:"required" ,json:"token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
