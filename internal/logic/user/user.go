@@ -35,7 +35,7 @@ func New() service.IUser {
 //	@param in
 //	@return bool
 func (s *sUser) IsDomainExist(ctx context.Context, in model.CheckDomainInput) bool {
-	count, err := dao.User.Ctx(ctx).Where(do.App{
+	count, err := dao.App.Ctx(ctx).Where(do.App{
 		Domain: in.Domain,
 	}).Count()
 	if err != nil {
@@ -390,7 +390,7 @@ func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreate
 	)
 	getUserId = in.UserId
 	nowTimestamp := time.Now().Unix()
-	//TODO 暂定 没有用户名用公钥标识填充
+	//TODO 暂定 没有二级域名就用公钥标识填充
 	if in.Subdomain == "" {
 		in.Subdomain = md5PublicKeyIdentification
 	}
@@ -399,9 +399,9 @@ func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreate
 	domain := in.Subdomain + "." + rootDomainName.String()
 	// Verify domain exists in the database
 	valCheckDomain := service.User().IsDomainExist(ctx, model.CheckDomainInput{Domain: domain})
-	if !valCheckDomain {
+	if valCheckDomain {
 		log.Println(gerror.Newf(`Sorry, your domain "%s" has been registered yet`, domain))
-		return gerror.Newf(`Sorry, your user "%s" has been registered yet`, domain)
+		return gerror.Newf(`Sorry, your domain "%s" has been registered yet`, domain)
 	}
 
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
@@ -420,7 +420,9 @@ func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreate
 		}
 		return nil
 	})
-} // CreateAppInfo
+}
+
+// CreateAppInfo
 // @Description: 记录App（模块）安装信息
 // @receiver s
 // @param ctx
