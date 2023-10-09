@@ -200,6 +200,7 @@ func (bs *BodySender) useByIpc(ipc IPC) (info *usedIpcInfo) {
 	return
 }
 
+// TODO 存在并发问题
 var UsableIpcBodyMap = make(map[IPC]*usableIpcBodyMapper)
 
 // UsableByIpc 监听流及处理

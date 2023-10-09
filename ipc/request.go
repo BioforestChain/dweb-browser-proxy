@@ -69,7 +69,8 @@ func FromRequest(reqID uint64, ipc IPC, url string, init RequestArgs) *Request {
 	var body *BodySender
 	switch v := init.Body.(type) {
 	case string:
-		body = FromBodySenderText(v, ipc)
+		//body = FromBodySenderText(v, ipc)
+		body = FromBodySenderBinary([]byte(v), ipc)
 	case []byte:
 		body = FromBodySenderBinary(v, ipc)
 	case *ReadableStream:

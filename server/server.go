@@ -108,7 +108,7 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 				go func() {
 					for {
-						data := make([]byte, 128)
+						data := make([]byte, 1024)
 						n, err := f.Read(data)
 						if err != nil {
 							bodyStream.Controller.Close()
