@@ -1,12 +1,13 @@
 package service
 
 import (
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"proxyServer/ipc"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (

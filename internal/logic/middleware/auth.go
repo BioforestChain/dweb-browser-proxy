@@ -11,6 +11,7 @@ import (
 	"proxyServer/internal/consts"
 	"proxyServer/internal/model/entity"
 	"proxyServer/internal/packed"
+	"strconv"
 	"time"
 )
 
@@ -49,8 +50,12 @@ func JWTAuth(r *ghttp.Request) {
 		return
 	}
 	// 将当前请求的userid信息保存到请求的上下文c上
-	r.Header.Set(consts.CtxUserIDKey, string(mc.UserID))
-	r.Middleware.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
+	r.Header.Set(consts.CtxUserIDKey, strconv.Itoa(int(mc.UserID)))
+	r.Header.Set(consts.CtxUserIdentificationKey, mc.UserIdentification)
+	r.Middleware.Next()
+	// 后续的处理函数可以用过mc.UserIdentification 来获取当前请求的用户信息
+	//log.Printf("jwtAccessToken Parse is %#v\n", mc.UserIdentification)
+
 }
 
 // GenToken
@@ -143,9 +148,9 @@ func (s *sMiddleware) RefreshToken(accessToken, refreshToken string) (*v1.Client
 	v, _ := err.(*jwt.ValidationError)
 	// 当access token是过期错误 并且 refresh token没有过期时就创建一个新的access token
 	if v.Errors == jwt.ValidationErrorExpired {
-		token, refreshToken, expiresAt, _ := s.GenToken(claims.UserID, claims.DeviceIdentification)
+		token, refreshToken, expiresAt, _ := s.GenToken(claims.UserID, claims.UserIdentification)
 		return &v1.ClientUserRefreshTokenRes{
-			claims.UserID, claims.DeviceIdentification,
+			claims.UserID, claims.UserIdentification,
 			token, refreshToken,
 			expiresAt,
 		}, nil

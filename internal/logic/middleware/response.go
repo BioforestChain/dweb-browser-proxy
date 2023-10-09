@@ -35,6 +35,9 @@ func ResponseHandler(r *ghttp.Request) {
 			code = gcode.CodeInternalError
 		}
 		msg = err.Error()
+		//if len(err.Error()) > 15 {
+		//	msg = gerror.Code(err).Message()
+		//}
 	} else {
 		if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 			msg = http.StatusText(r.Response.Status)

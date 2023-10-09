@@ -3,10 +3,11 @@ package consts
 import "time"
 
 const (
-	JwtSecret      = "8ab6c8dee22768da1503351069f032cb" // jwt密匙
-	CtxUserIDKey   = "userID"
-	Issuer         = "jwt"
-	JwtTTLTimeUnit = time.Hour
+	JwtSecret                = "8ab6c8dee22768da1503351069f032cb" // jwt密匙
+	CtxUserIDKey             = "userID"
+	CtxUserIdentificationKey = "userIdentification"
+	Issuer                   = "jwt"
+	JwtTTLTimeUnit           = time.Hour
 )
 
 type User struct {

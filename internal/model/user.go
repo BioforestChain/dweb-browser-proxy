@@ -13,13 +13,15 @@ import "proxyServer/internal/dao"
 
 type UserCreateInput struct {
 	Name           string
-	PublicKey      string
+	UserKey        string
 	Identification string
 	Domain         string
 	Timestamp      string
 	Remark         string
 }
 
+// UserAppInfoCreateInput
+// @Description: Domain,AppInfo
 type UserAppInfoCreateInput struct {
 	UserId               uint32
 	UserName             string
@@ -28,9 +30,10 @@ type UserAppInfoCreateInput struct {
 	DeviceIdentification string
 	PublicKey            string
 	IsInstall            uint32
-	//Domain               string
-	Timestamp string
-	Remark    string
+	Domain               string
+	Timestamp            string
+	Remark               string
+	Subdomain            string
 }
 
 type UserQueryInput struct {
@@ -48,6 +51,9 @@ type AppQueryInput struct {
 
 type CheckUrlInput struct {
 	Host string
+}
+type CheckDomainInput struct {
+	Domain string
 }
 type CheckDeviceInput struct {
 	DeviceIdentification string

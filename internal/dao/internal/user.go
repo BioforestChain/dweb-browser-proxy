@@ -28,7 +28,7 @@ type UserColumns struct {
 	CreatedAt      string // Created Time
 	UpdateAt       string // Updated Time
 	DeletedAt      string // Deleted Time
-	PublicKey      string //
+	UserKey        string //
 	Identification string // 用户id
 }
 
@@ -42,7 +42,7 @@ var userColumns = UserColumns{
 	CreatedAt:      "created_at",
 	UpdateAt:       "update_at",
 	DeletedAt:      "deleted_at",
-	PublicKey:      "public_key",
+	UserKey:        "user_key",
 	Identification: "identification",
 }
 

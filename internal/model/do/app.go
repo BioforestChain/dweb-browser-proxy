@@ -16,6 +16,7 @@ type App struct {
 	UserId         interface{} // 用户id
 	DeviceId       interface{} // 设备id
 	Name           interface{} // 名称
+	Domain         interface{} // 域名
 	Identification interface{} // app唯一标识
 	Remark         interface{} // 备注信息
 	Timestamp      interface{} // 时间戳
@@ -24,4 +25,5 @@ type App struct {
 	DeletedAt      *gtime.Time // Deleted Time
 	CumReqNum      interface{} // 累计被请求次数
 	IsInstall      interface{} // 是否安装：1安装0（未安装）卸载
+	PublicKey      interface{} // 公钥
 }
