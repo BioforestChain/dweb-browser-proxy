@@ -53,7 +53,9 @@ type CheckUrlInput struct {
 	Host string
 }
 type CheckDomainInput struct {
-	Domain string
+	Domain            string
+	UserId            uint32
+	AppIdentification string
 }
 type CheckDeviceInput struct {
 	DeviceIdentification string

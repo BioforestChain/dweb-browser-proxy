@@ -105,7 +105,7 @@ func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (r
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("ClientQuery Validator", err)
 	}
-	data, err := service.User().GetDomainInfo(ctx, model.AppQueryInput{
+	getOneDomain, err := service.User().GetDomainInfo(ctx, model.AppQueryInput{
 		AppIdentification:    req.AppIdentification,
 		DeviceIdentification: req.DeviceIdentification,
 		UserName:             req.UserName,
@@ -114,11 +114,7 @@ func (c *Controller) ClientQuery(ctx context.Context, req *v1.ClientQueryReq) (r
 	if err != nil {
 		return
 	}
-	if data != nil {
-		res = new(v1.ClientQueryRes)
-		res.Domain = data.Domain
-		res.Identification = data.Identification
-		return res, err
-	}
-	return
+	res = new(v1.ClientQueryRes)
+	res.Domain = getOneDomain
+	return res, err
 }
