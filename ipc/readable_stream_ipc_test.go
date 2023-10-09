@@ -83,7 +83,7 @@ func TestReadableStreamIPC_BindInputStream(t *testing.T) {
 
 		data, _ := json.Marshal(req)
 
-		ipc.OnMessage(func(msg interface{}, ipc IPC) {
+		ipc.OnMessage(func(msg any, ipc IPC) {
 			defer close(ch)
 
 			req, ok := msg.(*Request)
@@ -120,7 +120,7 @@ func TestReadableStreamIPC_BindInputStream(t *testing.T) {
 	//	ch := make(chan struct{})
 	//
 	//	ipc := NewReadableStreamIPC(CLIENT, &SupportProtocol{})
-	//	ipc.OnMessage(func(req interface{}, ipc IPC) {
+	//	ipc.OnMessage(func(req any, ipc IPC) {
 	//		defer close(ch)
 	//
 	//		fmt.Println("req: ", req, ipc)

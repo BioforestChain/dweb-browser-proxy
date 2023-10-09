@@ -6,7 +6,7 @@ import (
 )
 
 type BodyInter interface {
-	Raw() interface{}
+	Raw() any
 	Text() string
 	U8a() []byte
 	Stream() *ReadableStream
@@ -20,7 +20,7 @@ type Body struct {
 	offset   int // used by Read body
 }
 
-func (b *Body) Raw() interface{} {
+func (b *Body) Raw() any {
 	return b.bodyHub.Data
 }
 
@@ -85,23 +85,38 @@ func (b *Body) readU8a(p []byte) (int, error) {
 }
 
 func (b *Body) readReadableStream(p []byte) (n int, err error) {
+	bodyStream := b.Stream()
+	if bodyStream == nil || len(p) == 0 {
+		return 0, nil
+	}
+
+	reader := bodyStream.GetReader()
+	for {
+		r, err := reader.Read()
+		if err != nil || r.Done {
+			break
+		}
+
+		p = append(p, r.Value...)
+	}
+
 	return 0, nil
 }
 
-func (b *Body) read(p []byte, data []byte) (int, error) {
-	if b.offset >= len(data) {
+func (b *Body) read(p []byte, src []byte) (int, error) {
+	if b.offset >= len(src) {
 		b.offset = 0
 		return 0, io.EOF
 	}
 
-	n := copy(p, data[b.offset:])
+	n := copy(p, src[b.offset:])
 	b.offset += n
 
 	return n, nil
 }
 
 type BodyHub struct {
-	Data   interface{} // 类型是 string | []byte | ReadableStream
+	Data   any // 类型是 string | []byte | ReadableStream
 	Text   *string
 	Stream *ReadableStream
 	U8a    []byte
@@ -109,7 +124,7 @@ type BodyHub struct {
 
 // NewBodyHub
 // data类型只能是 string | []byte | ReadableStream
-func NewBodyHub(data interface{}) *BodyHub {
+func NewBodyHub(data any) *BodyHub {
 	bh := &BodyHub{Data: data}
 	switch v := data.(type) {
 	case string:

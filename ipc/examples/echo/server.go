@@ -56,7 +56,7 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 	})
 
 	// 监听并处理请求，echo请求数据
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+	serverIPC.OnRequest(func(req any, ic ipc.IPC) {
 		request := req.(*ipc.Request)
 		if request.URL == "https://www.example.com/search" && request.Method == ipc.POST {
 			body := request.Body.GetMetaBody().Data

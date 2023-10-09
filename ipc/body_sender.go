@@ -17,7 +17,7 @@ type BodySender struct {
 }
 
 // NewBodySender data类型包括：string | []byte | *ReadableStream
-func NewBodySender(data interface{}, ipc IPC) *BodySender {
+func NewBodySender(data any, ipc IPC) *BodySender {
 	bs := &BodySender{
 		ipc:         ipc,
 		openSignal:  NewSignal(false),
@@ -106,7 +106,7 @@ func (bs *BodySender) setIsStreamClosed(v bool) {
 	}
 }
 
-func (bs *BodySender) bodyAsMeta(body interface{}) *MetaBody {
+func (bs *BodySender) bodyAsMeta(body any) *MetaBody {
 	switch v := body.(type) {
 	case string:
 		return FromMetaBodyText(bs.ipc.GetUID(), []byte(v))
@@ -127,20 +127,20 @@ func (bs *BodySender) streamAsMeta(stream *ReadableStream) *MetaBody {
 	streamID := GetStreamID(stream)
 
 	// 读取流数据操作
-	pullingFunc := func(controller *streamController) {
-		data, err := controller.streamRead.readAny()
+	pullingFunc := func(streamCtrl *streamController) {
+		data, err := streamCtrl.streamRead.readAny()
 		if err == io.EOF {
-			// 退出流控制
-			controller.Aborted()
-
 			msg := NewStreamEnd(streamID)
 			// 不论是不是被 aborted，都发送结束信号
 			for ipc, _ := range bs.usedIpcMap {
 				_ = ipc.PostMessage(context.Background(), msg)
 			}
 
+			// 退出流控制
+			streamCtrl.Aborted()
+
 			// 关闭流
-			controller.streamRead.abortStream()
+			streamCtrl.streamRead.abortStream()
 			bs.emitStreamClose()
 			return
 		}
@@ -173,7 +173,7 @@ func (bs *BodySender) streamAsMeta(stream *ReadableStream) *MetaBody {
 	)
 
 	metaIDIpcBodySenderMap[mb.MetaID] = bs
-	bs.controller.Listen(func(streamSignal interface{}, ipc IPC) {
+	bs.controller.Listen(func(streamSignal any, ipc IPC) {
 		if _, ok := streamSignal.(streamCtorSignalAborted); ok {
 			delete(metaIDIpcBodySenderMap, mb.MetaID)
 		}
@@ -191,7 +191,7 @@ func (bs *BodySender) useByIpc(ipc IPC) (info *usedIpcInfo) {
 	if bs.isStream && !bs.isStreamOpened {
 		info = newUsedIpcInfo(bs, ipc)
 		bs.usedIpcMap[ipc] = info
-		bs.onStreamClose(func(data interface{}, ipc IPC) {
+		bs.onStreamClose(func(data any, ipc IPC) {
 			bs.emitStreamAborted(info)
 		})
 		return
@@ -214,7 +214,7 @@ func UsableByIpc(ipc IPC, body *BodySender) {
 	var ok bool
 	if usableIpcBodyM, ok = UsableIpcBodyMap[ipc]; !ok {
 		usableIpcBodyM = newUsableIpcBodyMapper()
-		usableIpcBodyM.onDestroy(ipc.OnStream(func(data interface{}, ipc IPC) {
+		usableIpcBodyM.onDestroy(ipc.OnStream(func(data any, ipc IPC) {
 			t, ok := IsStream(data)
 			if !ok {
 				return
@@ -244,7 +244,7 @@ func UsableByIpc(ipc IPC, body *BodySender) {
 				}
 			}
 		}))
-		usableIpcBodyM.onDestroy(func(data interface{}, ipc IPC) {
+		usableIpcBodyM.onDestroy(func(data any, none IPC) {
 			delete(UsableIpcBodyMap, ipc)
 		})
 
@@ -253,7 +253,7 @@ func UsableByIpc(ipc IPC, body *BodySender) {
 
 	if usableIpcBodyM.add(streamID, body) {
 		// 一个流一旦关闭，那么就将不再会与它有主动通讯上的可能
-		body.onStreamClose(func(data interface{}, ipc IPC) {
+		body.onStreamClose(func(data any, ipc IPC) {
 			usableIpcBodyM.remove(streamID)
 		})
 	}
@@ -366,7 +366,7 @@ func newStreamController(stream *ReadableStream, opts ...StreamControllerOption)
 	}
 
 	go func() {
-		unListen := sc.signal.Listen(func(streamSignal interface{}, ipc IPC) {
+		unListen := sc.signal.Listen(func(streamSignal any, ipc IPC) {
 			switch streamSignal.(type) {
 			case streamCtorSignalPulling:
 				sc.pulling, sc.paused = true, false
@@ -387,9 +387,9 @@ func newStreamController(stream *ReadableStream, opts ...StreamControllerOption)
 				}
 				sc.start()
 
-				if sc.abortFunc != nil {
-					sc.abortFunc(sc)
-				}
+				//if sc.abortFunc != nil {
+				//	sc.abortFunc(sc)
+				//}
 			}
 		})
 
@@ -406,6 +406,9 @@ func newStreamController(stream *ReadableStream, opts ...StreamControllerOption)
 			}
 
 			if sc.aborted {
+				if sc.abortFunc != nil {
+					sc.abortFunc(sc)
+				}
 				return
 			}
 
@@ -450,6 +453,7 @@ func (s *streamController) Paused() {
 }
 
 func (s *streamController) Aborted() {
+	s.pulling, s.paused, s.aborted = false, false, true
 	s.signal.Emit(streamCtorSignalAborted{}, nil)
 }
 

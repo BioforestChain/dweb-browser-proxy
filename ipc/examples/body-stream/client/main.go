@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
 	"net"
 	"os"
 	"path"
 	"proxyServer/ipc"
+	"time"
 )
 
 func main() {
@@ -42,20 +44,55 @@ func main() {
 		log.Fatalln("bodyStream is nil")
 	}
 
-	reader := bodyStream.GetReader()
-	data := make([]byte, 0)
-	for {
-		r, err := reader.Read()
-		if err != nil || r.Done {
-			break
-		}
-		data = append(data, r.Value...)
+	data, err := readStreamWithTimeout(bodyStream, time.Duration(10))
+	if err != nil {
+		log.Fatalln("read body stream err: ", err)
 	}
 
 	filename := path.Join(downloadPath, "golang.png")
 	if err := os.WriteFile(filename, data, 0666); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func readStreamWithTimeout(stream *ipc.ReadableStream, t time.Duration) ([]byte, error) {
+	timer := time.NewTimer(t * time.Second)
+
+	var timeout bool
+	go func() {
+		select {
+		case <-timer.C:
+			timeout = true
+			stream.Controller.Close()
+		}
+	}()
+
+	reader := stream.GetReader()
+	data := make([]byte, 0)
+	var readErr error
+	for {
+		r, err := reader.Read()
+		if err != nil {
+			readErr = err
+			break
+		}
+
+		if r.Done {
+			break
+		}
+
+		data = append(data, r.Value...)
+	}
+
+	if timeout {
+		return nil, errors.New("read body stream timeout")
+	}
+
+	if readErr != nil {
+		return nil, readErr
+	}
+
+	return data, nil
 }
 
 type IPCConn struct {

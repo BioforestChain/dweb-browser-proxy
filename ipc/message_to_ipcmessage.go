@@ -9,7 +9,7 @@ import (
 
 var ErrUnMarshalObjectToIpcMessage = errors.New("unmarshal message failed when object to IpcMessage")
 
-func objectToIpcMessage(data []byte, ipc IPC) (msg interface{}, err error) {
+func objectToIpcMessage(data []byte, ipc IPC) (msg any, err error) {
 	var m = struct {
 		Type      MessageType
 		Name      string

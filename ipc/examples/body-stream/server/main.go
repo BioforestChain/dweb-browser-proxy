@@ -60,46 +60,46 @@ func NewIPCConn(conn net.Conn) *IPCConn {
 	})
 
 	// 监听并处理请求，echo请求数据
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+	serverIPC.OnRequest(func(req any, ic ipc.IPC) {
 		request := req.(*ipc.Request)
-		if request.URL == "https://www.example.com/golang/golang.png" && request.Method == ipc.GET {
+		if !(request.URL == "https://www.example.com/golang/golang.png" && request.Method == ipc.GET) {
+			return
+		}
 
-			var res *ipc.Response
-			path, _ := getAbsPath("ipc/examples/download-image/server/golang.png")
-			f, err := os.Open(path)
-			if err != nil {
-				res = ipc.FromResponseText(
-					request.ID,
-					http.StatusInternalServerError,
-					ipc.NewHeader(),
-					http.StatusText(http.StatusInternalServerError),
-					ic,
-				)
-			} else {
-				bodyStream := ipc.NewReadableStream()
+		var res *ipc.Response
+		path, _ := getAbsPath("ipc/examples/download-image/server/golang.png")
+		f, err := os.Open(path)
+		if err != nil {
+			res = ipc.FromResponseText(
+				request.ID,
+				http.StatusInternalServerError,
+				ipc.NewHeader(),
+				http.StatusText(http.StatusInternalServerError),
+				ic,
+			)
+		} else {
+			bodyStream := ipc.NewReadableStream()
 
-				var total int
-
-				go func() {
-					for {
-						data := make([]byte, 1024*10)
-						n, err := f.Read(data)
-						if err != nil {
-							bodyStream.Controller.Close()
-							break
-						}
-						total += n
-						//log.Println("total: ", total)
-						_ = bodyStream.Enqueue(data[:n])
+			go func() {
+				defer f.Close()
+				for {
+					data := make([]byte, 1024*10)
+					n, err := f.Read(data)
+					if err != nil {
+						// close后，BodySender会发送stream end通知接收端
+						bodyStream.Controller.Close()
+						break
 					}
-				}()
 
-				res = ipc.FromResponseStream(request.ID, http.StatusOK, ipc.NewHeader(), bodyStream, ic)
-			}
+					_ = bodyStream.Enqueue(data[:n])
+				}
+			}()
 
-			if err := ic.PostMessage(context.TODO(), res); err != nil {
-				log.Println("post message err: ", err)
-			}
+			res = ipc.FromResponseStream(request.ID, http.StatusOK, ipc.NewHeader(), bodyStream, ic)
+		}
+
+		if err := ic.PostMessage(context.TODO(), res); err != nil {
+			log.Println("post message err: ", err)
 		}
 	})
 

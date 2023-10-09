@@ -39,7 +39,7 @@ type ReadableStream struct {
 type Hook func(controller *ReadableStreamDefaultController)
 
 var streamIDAcc uint64
-var defaultHighWaterMark uint64 = 10
+var defaultHighWaterMark uint64 = 1
 
 func NewReadableStream(options ...ReadableStreamOption) *ReadableStream {
 	stream := &ReadableStream{}

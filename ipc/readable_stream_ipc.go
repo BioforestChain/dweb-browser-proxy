@@ -78,7 +78,7 @@ func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
 			}
 		}
 
-		var msg interface{}
+		var msg any
 
 		if rsi.supportProtocol.MessagePack {
 			panic("messagepack invalid")
@@ -102,8 +102,8 @@ func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
 }
 
 // msg类型：*Request | *Response | Event | StreamData | Stream*
-func (rsi *ReadableStreamIPC) postMessage(ctx context.Context, msg interface{}) (err error) {
-	var msgRaw interface{}
+func (rsi *ReadableStreamIPC) postMessage(ctx context.Context, msg any) (err error) {
+	var msgRaw any
 	switch v := msg.(type) {
 	case *Request:
 		msgRaw = v.GetReqMessage() // ReqMessage
@@ -224,7 +224,7 @@ func newBinaryStreamRead(stream *ReadableStream) *binaryStreamRead {
 	b := &binaryStreamRead{
 		stream:   stream,
 		reader:   stream.GetReader(),
-		readChan: make(chan []byte, 10),
+		readChan: make(chan []byte, 1),
 		cache:    new(bytes.Buffer),
 	}
 

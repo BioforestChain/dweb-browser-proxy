@@ -23,7 +23,7 @@ func newPool(size int) sync.Pool {
 }
 
 func GetBuffer(size int) []byte {
-	var buf interface{}
+	var buf any
 
 	if size >= 32*1024 {
 		buf = buf32kPool.Get()

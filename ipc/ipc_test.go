@@ -121,11 +121,11 @@ func TestBaseIPC_createSignal_Close(t *testing.T) {
 	ipc := NewBaseIPC()
 	var i int
 	signal1 := ipc.createSignal(false)
-	signal1.Listen(func(req interface{}, ipc IPC) {
+	signal1.Listen(func(req any, ipc IPC) {
 		i++
 	})
 	signal2 := ipc.createSignal(false)
-	signal2.Listen(func(req interface{}, ipc IPC) {
+	signal2.Listen(func(req any, ipc IPC) {
 		i++
 	})
 

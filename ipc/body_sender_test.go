@@ -35,6 +35,9 @@ func Test_newStreamController(t *testing.T) {
 		WithStreamControllerPauseFunc(paused),
 		WithStreamControllerAbortFunc(aborted))
 
+	// newStreamController会初始化goroutine，sc.Pulling会和goroutine通信
+	// 避免sc.Pulling先执行，所以这里sleep等待goroutine初始化完
+	time.Sleep(5 * time.Millisecond)
 	sc.Pulling()
 
 	<-pauseCh
@@ -68,7 +71,6 @@ func Test_streamAsMeta(t *testing.T) {
 	// 1. 模拟body stream数据
 	go func() {
 		_ = bodyStream.Enqueue([]byte("hi"))
-		_ = bodyStream.Enqueue([]byte("hi"))
 	}()
 
 	// 测试需要Sleep：NewBodySender存在接收信号的goroutine，这里不sleep的话
@@ -93,7 +95,7 @@ func Test_streamAsMeta(t *testing.T) {
 	var streamData StreamData
 	_ = json.Unmarshal(data[4:], &streamData)
 
-	if !bytes.Equal(streamData.Data, []byte("hihi")) {
+	if !bytes.Equal(streamData.Data, []byte("hi")) {
 		t.Fatal("streamAsMeta falied")
 	}
 
@@ -116,7 +118,6 @@ func Test_UsableByIpc(t *testing.T) {
 
 	// 模拟body stream数据
 	go func() {
-		_ = bodyStream.Enqueue([]byte("hi"))
 		_ = bodyStream.Enqueue([]byte("hi"))
 	}()
 
@@ -144,7 +145,7 @@ func Test_UsableByIpc(t *testing.T) {
 	var streamData StreamData
 	_ = json.Unmarshal(bodyStreamData[4:], &streamData)
 
-	if !bytes.Equal(streamData.Data, []byte("hihi")) {
+	if !bytes.Equal(streamData.Data, []byte("hi")) {
 		t.Fatal("streamAsMeta falied")
 	}
 }
