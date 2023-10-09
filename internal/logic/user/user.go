@@ -357,13 +357,11 @@ func (s *sUser) IsDomainAvailable(ctx context.Context, domain string) (bool, err
 func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreateInput) (err error) {
 	//公钥标识-->域名标识生成
 	var (
-		getUserId                     uint32
+		getUserId                     = in.UserId
 		getDeviceId                   int
 		nowTimestamp                  = time.Now().Unix()
 		md5PublicKeyIdentification, _ = s.GenerateMD5ByPublicKeyIdentification(in.PublicKey)
 	)
-	getUserId = in.UserId
-
 	//TODO 暂定 没有二级域名就用公钥标识填充
 	if in.Subdomain == "" {
 		in.Subdomain = md5PublicKeyIdentification
@@ -375,7 +373,7 @@ func (s *sUser) CreateDomainInfo(ctx context.Context, in model.UserAppInfoCreate
 	if valCheckDomain {
 		return gerror.Newf(`Sorry, your domain "%s" has been registered yet`, domain)
 	}
-
+	// Verify domain this user already have in the database
 	valUserHasDomain := service.User().IsUserHasDomainExist(ctx, model.CheckDomainInput{AppIdentification: in.AppIdentification,
 		UserId: getUserId})
 	if !valUserHasDomain.IsNil() {
@@ -427,6 +425,7 @@ func (s *sUser) CreateAppInfo(ctx context.Context, in model.UserAppInfoCreateInp
 			Name:           in.AppName,
 			Identification: in.AppIdentification,
 			Timestamp:      nowTimestamp,
+			PublicKey:      in.PublicKey,
 			Remark:         in.Remark,
 			IsInstall:      in.IsInstall,
 		}).Save()
