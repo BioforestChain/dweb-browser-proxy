@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"golang.org/x/time/rate"
 	"io"
+	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
@@ -19,6 +21,8 @@ import (
 	"proxyServer/internal/controller/user"
 	helperIPC "proxyServer/internal/helper/ipc"
 	"proxyServer/internal/logic/middleware"
+	"proxyServer/internal/model"
+	"proxyServer/internal/service"
 	ws "proxyServer/internal/service/ws"
 	"proxyServer/ipc"
 	"strings"
@@ -187,11 +191,11 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 		return nil, errors.New("the service is unavailable")
 	}
 	// Verify req.ClientID exists in the database
-	//valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
-	//if !valCheckUser {
-	//	log.Println(gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID))
-	//	return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
-	//}
+	valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
+	if !valCheckUser {
+		log.Println(gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID))
+		return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
+	}
 	clientIpc := client.GetIpc()
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
