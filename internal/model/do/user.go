@@ -14,7 +14,6 @@ type User struct {
 	g.Meta         `orm:"table:user, do:true"`
 	Id             interface{} //
 	Name           interface{} // 用户名
-	Domain         interface{} // 域名
 	Remark         interface{} // 备注信息
 	Timestamp      interface{} // 时间戳
 	CreatedAt      *gtime.Time // Created Time

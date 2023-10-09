@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/frame/g"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model/do"
@@ -72,8 +73,8 @@ type ClientListQueryReq struct {
 // ClientQueryRes
 // @Description:
 type ClientQueryRes struct {
-	Domain         string `json:"domain"`             // 域名
-	Identification string `json:"app_identification"` // app唯一标识
+	Domain *gvar.Var `json:"domain"` // 域名
+	//Identification string        `json:"app_identification"` // app唯一标识
 }
 
 // ClientDomainQueryRes

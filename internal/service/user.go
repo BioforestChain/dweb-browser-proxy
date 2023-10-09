@@ -12,18 +12,20 @@ import (
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
 
+	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/database/gdb"
 )
 
 type (
 	IUser interface {
 		IsDomainExist(ctx context.Context, in model.CheckDomainInput) bool
+		IsUserHasDomainExist(ctx context.Context, in model.CheckDomainInput) *gvar.Var
 		IsDeviceExist(ctx context.Context, in model.CheckDeviceInput) bool
 		IsUserExist(ctx context.Context, in model.CheckUserInput) bool
 		CreateUser(ctx context.Context, in model.UserCreateInput) (entity *v1.ClientRegRes, err error)
 		InsertDevice(ctx context.Context, tx gdb.TX, reqData model.DataToDevice) (result sql.Result, err error)
 		GetUserList(ctx context.Context, in model.UserQueryInput) (entities []*do.User, total int, err error)
-		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *v1.ClientQueryRes, err error)
+		GetDomainInfo(ctx context.Context, in model.AppQueryInput) (entities *gvar.Var, err error)
 		GenerateMD5ByPublicKeyIdentification(identification string) (string, error)
 		IsUserIdentificationAvailable(ctx context.Context, identification string) (bool, error)
 		IsNameAvailable(ctx context.Context, Name string) (bool, error)

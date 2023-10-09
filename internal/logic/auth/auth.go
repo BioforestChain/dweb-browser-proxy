@@ -20,6 +20,15 @@ func init() {
 func New() service.IAuth {
 	return &sAuth{}
 }
+
+// GenToken
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param UserId
+//	@param UserIdentification
+//	@return res
 func (s *sAuth) GenToken(ctx context.Context, UserId uint32, UserIdentification string) (res *v1.ClientUserTokenDataRes) {
 	token, refreshToken, expireTime, _ := service.Middleware().GenToken(UserId, UserIdentification)
 	res = new(v1.ClientUserTokenDataRes)
@@ -31,10 +40,15 @@ func (s *sAuth) GenToken(ctx context.Context, UserId uint32, UserIdentification 
 	res.ExpireTime = timeHelper.Date(expireTime, consts.DefaultDateFormat)
 	return res
 }
+
+// RefreshToken
+//
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param req
+//	@return res
 func (s *sAuth) RefreshToken(ctx context.Context, req *v1.ClientRefreshTokenReq) (res *v1.ClientUserTokenDataRes) {
-	//var user consts.User
-	//userId, _ := g.Cfg().Get(ctx, "auth.userId")
-	//user.UserID = userId.Uint32()
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("ClientRefreshTokenReq Validator", err)
 	}
