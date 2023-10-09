@@ -4,7 +4,10 @@ import (
 	"context"
 	"github.com/gorilla/websocket"
 	"log"
+	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"proxyServer/ipc"
 )
 
@@ -55,7 +58,6 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 		url, _ := url.ParseRequestURI(request.URL)
 
-		//if (url.Host + url.Path) == "www.example.com/search" {
 		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/test" {
 			//bodyReceiver := request.Body.(*ipc.BodyReceiver)
 			//body := bodyReceiver.GetMetaBody().Data
@@ -71,6 +73,66 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 				ipc.NewBodySender([]byte(body), ic),
 				ic,
 			)
+
+			if err := ic.PostMessage(context.TODO(), res); err != nil {
+				log.Println("post message err: ", err)
+			}
+		}
+	})
+
+	// 监听并处理请求，echo请求数据
+	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+		request := req.(*ipc.Request)
+		log.Println("on request: ", request.ID)
+
+		url, _ := url.ParseRequestURI(request.URL)
+
+		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/stream" {
+			var res *ipc.Response
+			path, _ := getAbsPath("server/golang.png")
+			f, err := os.Open(path)
+			if err != nil {
+				res = ipc.FromResponseText(
+					request.ID,
+					http.StatusInternalServerError,
+					ipc.NewHeader(),
+					http.StatusText(http.StatusInternalServerError),
+					ic,
+				)
+			} else {
+				bodyStream := ipc.NewReadableStream()
+
+				var total int
+				info, _ := f.Stat()
+				log.Println(info.Size())
+
+				go func() {
+					for {
+						data := make([]byte, 128)
+						n, err := f.Read(data)
+						if err != nil {
+							bodyStream.Controller.Close()
+							break
+						}
+						total += n
+
+						_ = bodyStream.Enqueue(data[:n])
+						log.Println("total: ", total)
+					}
+
+					log.Println(f.Close())
+				}()
+
+				res = ipc.FromResponseStream(
+					request.ID,
+					http.StatusOK,
+					ipc.NewHeaderWithExtra(map[string]string{
+						"Content-Type": "image/png",
+					}),
+					bodyStream,
+					ic,
+				)
+			}
 
 			if err := ic.PostMessage(context.TODO(), res); err != nil {
 				log.Println("post message err: ", err)
@@ -111,4 +173,13 @@ func (i *IPCConn) Close() {
 	i.ipc.Close()
 	i.inputStream.Controller.Close()
 	i.conn.Close()
+}
+
+func getAbsPath(path string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cwd, path), nil
 }

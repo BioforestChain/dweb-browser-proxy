@@ -8,7 +8,7 @@ import (
 func TestSignalAutoStart(t *testing.T) {
 	signal := NewSignal(true)
 
-	signal.Listen(func(oc interface{}, ipc IPC) {
+	signal.Listen(func(oc any, ipc IPC) {
 		req, _ := oc.(*Request)
 		if req.Type != REQUEST {
 			t.Fatal("callback failed")
@@ -35,7 +35,7 @@ func TestSignalLazyStart(t *testing.T) {
 	wg.Add(2)
 
 	// observer will be executed twice because there are two emits.
-	signal.Listen(func(oc interface{}, ipc IPC) {
+	signal.Listen(func(oc any, ipc IPC) {
 		defer wg.Done()
 
 		req, _ := oc.(*Request)
@@ -58,7 +58,7 @@ func TestSignalMultiListen(t *testing.T) {
 	wg.Add(2)
 
 	var i int
-	signal.Listen(func(oc interface{}, ipc IPC) {
+	signal.Listen(func(oc any, ipc IPC) {
 		defer wg.Done()
 
 		req, _ := oc.(*Request)
@@ -68,7 +68,7 @@ func TestSignalMultiListen(t *testing.T) {
 		}
 	})
 
-	signal.Listen(func(oc interface{}, ipc IPC) {
+	signal.Listen(func(oc any, ipc IPC) {
 		defer wg.Done()
 
 		req, _ := oc.(*Request)
@@ -101,7 +101,7 @@ func TestSignal_Unregister(t *testing.T) {
 	wg.Add(2)
 
 	// observer will be executed twice because there are two emits.
-	signal.Listen(func(oc interface{}, ipc IPC) {
+	signal.Listen(func(oc any, ipc IPC) {
 		defer wg.Done()
 
 		req, _ := oc.(*Request)
@@ -111,7 +111,7 @@ func TestSignal_Unregister(t *testing.T) {
 		}
 	})
 
-	unRegister := signal.Listen(func(oc interface{}, ipc IPC) {
+	unRegister := signal.Listen(func(oc any, ipc IPC) {
 		t.Fatal("callback failed")
 	})
 	unRegister()
@@ -130,7 +130,7 @@ func TestSignal_Unregister(t *testing.T) {
 func TestSignal_Clear(t *testing.T) {
 	signal := NewSignal(true)
 
-	signal.Listen(func(oc interface{}, ipc IPC) {})
+	signal.Listen(func(oc any, ipc IPC) {})
 	signal.Clear()
 
 	obs := signal.GetObservers()

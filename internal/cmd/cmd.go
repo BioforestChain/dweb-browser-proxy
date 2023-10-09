@@ -19,6 +19,7 @@ import (
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
+	helperIPC "proxyServer/internal/helper/ipc"
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
@@ -94,11 +95,24 @@ var (
 					for k, v := range resIpc.Header {
 						r.Response.Header().Set(k, v)
 					}
-					if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
-						r.Response.WriteStatus(400, "请求出错")
+
+					bodyStream := resIpc.Body.Stream()
+					if bodyStream == nil {
+						if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
+							r.Response.WriteStatus(400, "请求出错")
+						}
+					} else {
+						data, err := helperIPC.ReadStreamWithTimeout(bodyStream, 10*time.Second)
+						if err != nil {
+							r.Response.WriteStatus(400, err)
+						} else {
+							r.Response.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+							_, _ = r.Response.Writer.Write(data)
+						}
 					}
 				})
 			})
+
 			s.Group("/proxy", func(group *ghttp.RouterGroup) {
 				group.Middleware(
 					middleware.ResponseHandler,
@@ -193,6 +207,7 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	}
 	return resIpc, nil
 }
+
 func ipcErrResponse(code int, msg string) *ipc.Response {
 	body := fmt.Sprintf(`{"code": %d, "message": "%s", "data": null}`, code, msg)
 	newIpc := ipc.NewBaseIPC()

@@ -5,11 +5,11 @@ import "fmt"
 type Event struct {
 	Type     MessageType
 	Name     string
-	Data     interface{}
+	Data     any
 	Encoding DataEncoding
 }
 
-func NewEvent(name string, data interface{}, encoding DataEncoding) *Event {
+func NewEvent(name string, data any, encoding DataEncoding) *Event {
 	return &Event{Type: EVENT, Name: name, Data: data, Encoding: encoding}
 }
 

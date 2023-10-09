@@ -14,11 +14,11 @@ var ErrReqTimeout = errors.New("req timeout")
 type IPC interface {
 	Request(url string, init RequestArgs) *Request
 	Send(ctx context.Context, req *Request) (*Response, error)
-	PostMessage(ctx context.Context, msg interface{}) error
+	PostMessage(ctx context.Context, msg any) error
 	GetUID() uint64
 	GetSupportBinary() bool
-	OnClose(observer Observer)
 	OnStream(observer Observer) Observer
+	OnClose(observer Observer)
 	Close()
 	GetOutputStreamReader() ReadableStreamReader
 }
@@ -39,9 +39,9 @@ type BaseIPC struct {
 	mu         sync.Mutex
 	reqTimeout time.Duration
 
-	postMessage           func(ctx context.Context, msg interface{}) error // msg发送至outputStream
-	doClose               func()                                           // inputStream被关闭时，需要close outputStream
-	getOutputStreamReader func() ReadableStreamReader                      // 获取outputStream reader
+	postMessage           func(ctx context.Context, msg any) error // msg发送至outputStream
+	doClose               func()                                   // inputStream被关闭时，需要close outputStream
+	getOutputStreamReader func() ReadableStreamReader              // 获取outputStream reader
 
 	listenRequestOnce, listenResponseOnce, listenStreamOnce sync.Once
 }
@@ -61,7 +61,7 @@ func NewBaseIPC(opts ...Option) *BaseIPC {
 	}
 
 	if ipc.postMessage == nil {
-		ipc.postMessage = func(ctx context.Context, req interface{}) error {
+		ipc.postMessage = func(ctx context.Context, req any) error {
 			return nil
 		}
 	}
@@ -112,7 +112,7 @@ func (bipc *BaseIPC) Send(ctx context.Context, req *Request) (*Response, error) 
 	}
 }
 
-func (bipc *BaseIPC) PostMessage(ctx context.Context, msg interface{}) error {
+func (bipc *BaseIPC) PostMessage(ctx context.Context, msg any) error {
 	return bipc.postMessage(ctx, msg)
 }
 
@@ -128,7 +128,7 @@ func (bipc *BaseIPC) OnRequest(observer Observer) {
 	bipc.listenRequestOnce.Do(func() {
 		bipc.requestSignal = func() *Signal {
 			signal := bipc.createSignal(false)
-			bipc.OnMessage(func(req interface{}, ipc IPC) {
+			bipc.OnMessage(func(req any, ipc IPC) {
 				if _, ok := req.(*Request); !ok {
 					return
 				}
@@ -148,7 +148,7 @@ func (bipc *BaseIPC) OnStream(observer Observer) Observer {
 	bipc.listenStreamOnce.Do(func() {
 		bipc.streamSignal = func() *Signal {
 			signal := bipc.createSignal(false)
-			bipc.OnMessage(func(req interface{}, ipc IPC) {
+			bipc.OnMessage(func(req any, ipc IPC) {
 				if _, ok := IsStream(req); ok {
 					signal.Emit(req, ipc)
 				}
@@ -159,7 +159,7 @@ func (bipc *BaseIPC) OnStream(observer Observer) Observer {
 
 	unListen := bipc.streamSignal.Listen(observer)
 
-	return func(data interface{}, ipc IPC) {
+	return func(data any, ipc IPC) {
 		unListen()
 	}
 }
@@ -188,7 +188,7 @@ func (bipc *BaseIPC) RegisterReqID(reqID uint64, resCh chan *Response) {
 	bipc.reqResMap.update(reqID, resCh)
 
 	bipc.listenResponseOnce.Do(func() {
-		bipc.OnMessage(func(oc interface{}, ipc IPC) {
+		bipc.OnMessage(func(oc any, ipc IPC) {
 			if res, ok := oc.(*Response); ok {
 				if resChan, has := bipc.reqResMap.getAndDelete(res.ReqID); has {
 					//bipc.reqResMap.delete(res.ReqID)
@@ -217,7 +217,7 @@ func (bipc *BaseIPC) Close() {
 
 func (bipc *BaseIPC) createSignal(autoStart bool) *Signal {
 	signal := NewSignal(autoStart)
-	bipc.OnClose(func(req interface{}, ipc IPC) {
+	bipc.OnClose(func(req any, ipc IPC) {
 		signal.Clear()
 	})
 	return signal
@@ -276,7 +276,7 @@ func WithReqTimeout(duration time.Duration) Option {
 	}
 }
 
-func WithPostMessage(postMsg func(ctx context.Context, req interface{}) error) Option {
+func WithPostMessage(postMsg func(ctx context.Context, req any) error) Option {
 	return func(ipc *BaseIPC) {
 		ipc.postMessage = postMsg
 	}
@@ -306,7 +306,7 @@ func WithStreamReader(getOutputStreamReader func() ReadableStreamReader) Option 
 
 type RequestArgs struct {
 	Method string
-	Body   interface{} // nil | "" | string | []byte | ReadableStream
+	Body   any // nil | "" | string | []byte | ReadableStream
 	Header Header
 }
 

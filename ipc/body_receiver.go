@@ -18,7 +18,7 @@ func NewBodyReceiver(metaBody *MetaBody, ipc IPC) *BodyReceiver {
 		}
 		metaID := fmt.Sprintf("%d/%s", metaBody.SenderUID, metaBody.StreamID)
 		if _, ok := metaIDReceiverIpcMap[metaID]; !ok {
-			ipc.OnClose(func(req interface{}, ipc IPC) {
+			ipc.OnClose(func(req any, ipc IPC) {
 				delete(metaIDReceiverIpcMap, metaID)
 			})
 			metaIDReceiverIpcMap[metaID] = ipc
@@ -71,7 +71,7 @@ func metaToStream(metaBody *MetaBody, ipc IPC) *ReadableStream {
 
 	onStart := func(ctrl *ReadableStreamDefaultController) {
 		// ipc 一旦关闭，这个流也要关闭，因为只有这个ipc能为它提供数据
-		streamIPC.OnClose(func(data interface{}, ipc IPC) {
+		streamIPC.OnClose(func(data any, ipc IPC) {
 			ctrl.Close()
 		})
 
@@ -81,7 +81,7 @@ func metaToStream(metaBody *MetaBody, ipc IPC) *ReadableStream {
 		}
 
 		var unListen Observer
-		unListen = streamIPC.OnStream(func(data interface{}, ipc IPC) {
+		unListen = streamIPC.OnStream(func(data any, ipc IPC) {
 			if streamMsg, ok := IsStream(data); ok && streamMsg.StreamID == streamID {
 				switch streamMsg.Type {
 				case STREAM_DATA:

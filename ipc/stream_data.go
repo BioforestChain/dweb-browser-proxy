@@ -31,7 +31,7 @@ func FromStreamDataBinary(streamID string, data []byte) *StreamData {
 
 type StreamMsg = StreamData
 
-func IsStream(data interface{}) (StreamMsg, bool) {
+func IsStream(data any) (StreamMsg, bool) {
 	switch v := data.(type) {
 	case *StreamData:
 		return StreamMsg{Type: v.Type, StreamID: v.StreamID, Data: v.Data, Encoding: v.Encoding}, true
@@ -48,7 +48,7 @@ func IsStream(data interface{}) (StreamMsg, bool) {
 	}
 }
 
-func DataToBinary(data interface{}, encoding DataEncoding) (r []byte) {
+func DataToBinary(data any, encoding DataEncoding) (r []byte) {
 	switch encoding {
 	case UTF8:
 		r = data.([]byte)

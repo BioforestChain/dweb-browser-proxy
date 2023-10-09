@@ -115,7 +115,7 @@ func FromMetaBodyBase64(senderUID uint64, data []byte, options ...MetaBodyOption
 }
 
 // FromMetaBodyBinary sender类型uint64 | IPC
-func FromMetaBodyBinary(sender interface{}, data []byte, options ...MetaBodyOption) *MetaBody {
+func FromMetaBodyBinary(sender any, data []byte, options ...MetaBodyOption) *MetaBody {
 	var mb *MetaBody
 
 	switch v := sender.(type) {

@@ -12,10 +12,10 @@ type Signal struct {
 	mutex      sync.Mutex
 }
 
-type Observer func(data interface{}, ipc IPC)
+type Observer func(data any, ipc IPC)
 
 type emitArgs struct {
-	data interface{}
+	data any
 	ipc  IPC
 }
 
@@ -53,7 +53,7 @@ func (s *Signal) Listen(observer Observer) func() {
 	}
 }
 
-func (s *Signal) Emit(data interface{}, ipc IPC) {
+func (s *Signal) Emit(data any, ipc IPC) {
 	if s.started {
 		s.emit(data, ipc)
 	} else {
@@ -63,11 +63,16 @@ func (s *Signal) Emit(data interface{}, ipc IPC) {
 	}
 }
 
-func (s *Signal) emit(data interface{}, ipc IPC) {
+func (s *Signal) emit(data any, ipc IPC) {
 	for _, ob := range s.observers {
-		go func(observer Observer) {
-			observer(data, ipc)
-		}(ob)
+		// TODO 改成异步的话，在body stream场景下，
+		// 先后接收stream data和 stream end时，由于异步，可能先stream end，
+		// 导致stream data接收不全
+		// 同步处理的话，ob存在阻塞操作会导致后续ob无法执行
+		ob(data, ipc)
+		//go func(observer Observer) {
+		//	observer(data, ipc)
+		//}(ob)
 	}
 }
 
