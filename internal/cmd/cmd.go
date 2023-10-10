@@ -25,7 +25,6 @@ import (
 	"proxyServer/internal/service"
 	ws "proxyServer/internal/service/ws"
 	"proxyServer/ipc"
-	"strings"
 	"sync"
 	"time"
 )
@@ -82,10 +81,12 @@ var (
 				group.ALL("/*any", func(r *ghttp.Request) {
 
 					req := &v1.IpcReq{}
-					req.Header = strings.Join(r.Header["Content-Type"], "")
+					//req.Header = strings.Join(r.Header["Content-Type"], "")
+					req.Header = r.Header
 					req.Method = r.Method
 					req.URL = r.GetUrl()
 					req.Host = r.GetHost()
+					req.Body = r.GetBody()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("client_id").String()
 					resIpc, err := Proxy2Ipc(ctx, hub, req)
@@ -197,10 +198,17 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 		return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
 	}
 	clientIpc := client.GetIpc()
+	overallHeader := make(map[string]string)
+	for k, v := range req.Header {
+		overallHeader[k] = v[0]
+	}
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
-		Header: map[string]string{"Content-Type": req.Header},
+		//Header: map[string]string{"Content-Type": req.Header, "xx": "1"},
+		Header: overallHeader,
+		Body:   req.Body,
 	})
+
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
 	if err != nil {
 		return nil, err

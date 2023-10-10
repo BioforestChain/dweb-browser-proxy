@@ -57,8 +57,7 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 		log.Println("on request: ", request.ID)
 
 		url, _ := url.ParseRequestURI(request.URL)
-
-		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/test" {
+		if (url.Host+url.Path) == "127.0.0.1:8000/ipc/test" && request.Method == "GET" {
 			//bodyReceiver := request.Body.(*ipc.BodyReceiver)
 			//body := bodyReceiver.GetMetaBody().Data
 			//log.Println("onRequest: ", request.URL, string(body), ic)
@@ -133,6 +132,35 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 					ic,
 				)
 			}
+
+			if err := ic.PostMessage(context.TODO(), res); err != nil {
+				log.Println("post message err: ", err)
+			}
+		}
+	})
+	// POST http test
+	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+		request := req.(*ipc.Request)
+		log.Println("on request: ", request.ID)
+
+		url, _ := url.ParseRequestURI(request.URL)
+
+		if (url.Host+url.Path) == "127.0.0.1:8000/ipc/test" && request.Method == "POST" {
+			//bodyReceiver := request.Body.(*ipc.BodyReceiver)
+			//body := bodyReceiver.GetMetaBody().Data
+			//log.Println("onRequest: ", request.URL, string(body), ic)
+			//log.Printf("post body is: %#v\n", request.Body)
+			//log.Printf("post Header is %#v\n: ", request.Header)
+			body := `{"code": 0, "message": "hi by post"}`
+			res := ipc.NewResponse(
+				request.ID,
+				200,
+				ipc.NewHeaderWithExtra(map[string]string{
+					"Content-Type": "application/json",
+				}),
+				ipc.NewBodySender([]byte(body), ic),
+				ic,
+			)
 
 			if err := ic.PostMessage(context.TODO(), res); err != nil {
 				log.Println("post message err: ", err)
