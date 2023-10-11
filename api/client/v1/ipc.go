@@ -9,7 +9,7 @@ type IpcReq struct {
 	URL      string              `v:"required"` //
 	Host     string              `v:"required"` //
 	ClientID string              `v:"required"` // 用户id
-	Body     []byte              `v:"required"` // 用户id
+	Body     any                 `v:"required"` // Body
 }
 
 //type IpcRes struct {

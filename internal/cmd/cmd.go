@@ -11,7 +11,6 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 	"golang.org/x/time/rate"
 	"io"
-	"log"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
@@ -194,21 +193,21 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	// Verify req.ClientID exists in the database
 	valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
 	if !valCheckUser {
-		log.Println(gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID))
 		return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
 	}
-	clientIpc := client.GetIpc()
-	overallHeader := make(map[string]string)
+	var (
+		clientIpc = client.GetIpc()
+		//req.Header map[string]string{"Content-Type": req.Header, "xx": "1"},
+		overallHeader = make(map[string]string)
+	)
 	for k, v := range req.Header {
 		overallHeader[k] = v[0]
 	}
 	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
 		Method: req.Method,
-		//Header: map[string]string{"Content-Type": req.Header, "xx": "1"},
 		Header: overallHeader,
 		Body:   req.Body,
 	})
-
 	resIpc, err := clientIpc.Send(ctx, reqIpc)
 	if err != nil {
 		return nil, err
