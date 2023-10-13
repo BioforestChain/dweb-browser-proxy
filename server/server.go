@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -168,6 +169,29 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 		}
 	})
 
+	///proxy/pubsub/subscribe_msg
+	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+		request := req.(*ipc.Request)
+		log.Println("on request: ", request.ID)
+		url, _ := url.ParseRequestURI(request.URL)
+		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
+			body := `{"code": 0, "message": "subscribe_msg"}`
+			res := ipc.NewResponse(
+				request.ID,
+				200,
+				ipc.NewHeaderWithExtra(map[string]string{
+					"Content-Type": "application/json",
+				}),
+				ipc.NewBodySender([]byte(body), ic),
+				ic,
+			)
+
+			if err := ic.PostMessage(context.TODO(), res); err != nil {
+				log.Println("post message err: ", err)
+			}
+		}
+	})
+
 	inputStream := ipc.NewReadableStream()
 
 	ipcConn := &IPCConn{
@@ -193,7 +217,7 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 			}
 		})
 	}()
-
+	fmt.Printf("ipcConn: %#v\n", ipcConn)
 	return ipcConn
 }
 

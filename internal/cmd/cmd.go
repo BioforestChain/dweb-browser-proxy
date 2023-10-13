@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"
@@ -15,15 +13,14 @@ import (
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/auth"
+	"proxyServer/internal/controller/chat"
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
 	"proxyServer/internal/controller/user"
 	helperIPC "proxyServer/internal/helper/ipc"
 	"proxyServer/internal/logic/middleware"
-	"proxyServer/internal/model"
-	"proxyServer/internal/service"
+	"proxyServer/internal/packed"
 	ws "proxyServer/internal/service/ws"
-	"proxyServer/ipc"
 	"sync"
 	"time"
 )
@@ -88,14 +85,13 @@ var (
 					req.Body = r.GetBody()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("client_id").String()
-					resIpc, err := Proxy2Ipc(ctx, hub, req)
+					resIpc, err := packed.Proxy2Ipc(ctx, hub, req)
 					if err != nil {
-						resIpc = ipcErrResponse(consts.ServiceIsUnavailable, err.Error())
+						resIpc = packed.IpcErrResponse(consts.ServiceIsUnavailable, err.Error())
 					}
 					for k, v := range resIpc.Header {
 						r.Response.Header().Set(k, v)
 					}
-
 					bodyStream := resIpc.Body.Stream()
 					if bodyStream == nil {
 						if _, err = io.Copy(r.Response.Writer, resIpc.Body); err != nil {
@@ -129,6 +125,7 @@ var (
 					group.Middleware(middleware.JWTAuth)
 					group.Bind(
 						user.New(),
+						chat.New(hub),
 					)
 				})
 				s.BindHandler("/ws", func(r *ghttp.Request) {
@@ -175,57 +172,4 @@ func enhanceOpenAPIDoc(s *ghttp.Server) {
 			URL:  "https://goframe.org",
 		},
 	}
-}
-
-// Proxy2Ipc
-//
-//	@Description: The request goes to the IPC object for processing
-//	@param ctx
-//	@param hub
-//	@param req
-//	@return res
-//	@return err
-func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Response, err error) {
-	client := hub.GetClient(req.ClientID)
-	if client == nil {
-		return nil, errors.New("the service is unavailable")
-	}
-	// Verify req.ClientID exists in the database
-	valCheckUser := service.User().IsUserExist(ctx, model.CheckUserInput{UserIdentification: req.ClientID})
-	if !valCheckUser {
-		return nil, gerror.Newf(`Sorry, your user "%s" is not registered yet`, req.ClientID)
-	}
-	var (
-		clientIpc = client.GetIpc()
-		//req.Header map[string]string{"Content-Type": req.Header, "xx": "1"},
-		overallHeader = make(map[string]string)
-	)
-	for k, v := range req.Header {
-		overallHeader[k] = v[0]
-	}
-	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
-		Method: req.Method,
-		Header: overallHeader,
-		Body:   req.Body,
-	})
-	resIpc, err := clientIpc.Send(ctx, reqIpc)
-	if err != nil {
-		return nil, err
-	}
-	return resIpc, nil
-}
-
-func ipcErrResponse(code int, msg string) *ipc.Response {
-	body := fmt.Sprintf(`{"code": %d, "message": "%s", "data": null}`, code, msg)
-	newIpc := ipc.NewBaseIPC()
-	res := ipc.NewResponse(
-		1,
-		400,
-		ipc.NewHeaderWithExtra(map[string]string{
-			"Content-Type": "application/json",
-		}),
-		ipc.NewBodySender([]byte(body), newIpc),
-		newIpc,
-	)
-	return res
 }
