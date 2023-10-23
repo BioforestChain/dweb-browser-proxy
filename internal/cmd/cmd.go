@@ -12,11 +12,13 @@ import (
 	"net/http"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
+	"proxyServer/internal/controller/app"
 	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/chat"
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
-	"proxyServer/internal/controller/user"
+	//"proxyServer/internal/logic/net"
+	"proxyServer/internal/controller/net"
 	helperIPC "proxyServer/internal/helper/ipc"
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/internal/packed"
@@ -122,13 +124,15 @@ var (
 						auth.New(),
 						pre_user.New(),
 					)
-					group.Middleware(middleware.JWTAuth)
+					//group.Middleware(middleware.JWTAuth)
 					group.Bind(
-						user.New(),
+						net.New(),
+						app.New(),
 						chat.New(hub),
 					)
 				})
 				s.BindHandler("/ws", func(r *ghttp.Request) {
+					//
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
 				// Special handler that needs authentication.

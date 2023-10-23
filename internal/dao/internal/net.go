@@ -11,78 +11,70 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// AppDao is the data access object for table app.
-type AppDao struct {
+// NetDao is the data access object for table net.
+type NetDao struct {
 	table   string     // table is the underlying table name of the DAO.
 	group   string     // group is the database configuration group name of current DAO.
-	columns AppColumns // columns contains all the column names of Table for convenient usage.
+	columns NetColumns // columns contains all the column names of Table for convenient usage.
 }
 
-// AppColumns defines and stores column names for table app.
-type AppColumns struct {
+// NetColumns defines and stores column names for table net.
+type NetColumns struct {
 	Id        string //
-	AppId     string // app模块唯一标识
-	NetId     string // 网络模块一标识
-	UserName  string // 用户名称
-	AppName   string // 模块名称
+	NetId     string // 网络模块id
+	Domain    string // 域名
+	Remark    string // 备注信息
 	Timestamp string // 时间戳
+	InOnline  string // 上线：1上线，0下线
 	CreatedAt string // Created Time
 	UpdateAt  string // Updated Time
 	DeletedAt string // Deleted Time
-	CumReqNum string // 累计被请求次数
-	IsInstall string // 是否安装：1安装，0（未安装）卸载
-	IsOnline  string // 是否在线：1在线，0不在线
-	PublicKey string // 公钥
 }
 
-// appColumns holds the columns for table app.
-var appColumns = AppColumns{
+// netColumns holds the columns for table net.
+var netColumns = NetColumns{
 	Id:        "id",
-	AppId:     "app_id",
 	NetId:     "net_id",
-	UserName:  "user_name",
-	AppName:   "app_name",
+	Domain:    "domain",
+	Remark:    "remark",
 	Timestamp: "timestamp",
+	InOnline:  "in_online",
 	CreatedAt: "created_at",
 	UpdateAt:  "update_at",
 	DeletedAt: "deleted_at",
-	CumReqNum: "cum_req_num",
-	IsInstall: "is_install",
-	IsOnline:  "is_online",
-	PublicKey: "public_key",
 }
 
-// NewAppDao creates and returns a new DAO object for table data access.
-func NewAppDao() *AppDao {
-	return &AppDao{
+// NewNetDao creates and returns a new DAO object for table data access.
+func NewNetDao() *NetDao {
+	return &NetDao{
 		group:   "default",
-		table:   "app",
-		columns: appColumns,
+		table:   "net",
+		columns: netColumns,
 	}
 }
 
 // DB retrieves and returns the underlying raw database management object of current DAO.
-func (dao *AppDao) DB() gdb.DB {
+func (dao *NetDao) DB() gdb.DB {
 	return g.DB(dao.group)
 }
 
 // Table returns the table name of current dao.
-func (dao *AppDao) Table() string {
+func (dao *NetDao) Table() string {
 	return dao.table
 }
 
 // Columns returns all column names of current dao.
-func (dao *AppDao) Columns() AppColumns {
+func (dao *NetDao) Columns() NetColumns {
 	return dao.columns
 }
 
 // Group returns the configuration group name of database of current dao.
-func (dao *AppDao) Group() string {
+func (dao *NetDao) Group() string {
 	return dao.group
 }
 
 // Ctx creates and returns the Model for current DAO, It automatically sets the context for current operation.
-func (dao *AppDao) Ctx(ctx context.Context) *gdb.Model {
+func (dao *NetDao) Ctx(ctx context.Context) *gdb.Model {
 	return dao.DB().Model(dao.table).Safe().Ctx(ctx)
 }
 
@@ -92,6 +84,6 @@ func (dao *AppDao) Ctx(ctx context.Context) *gdb.Model {
 //
 // Note that, you should not Commit or Rollback the transaction in function f
 // as it is automatically handled by this function.
-func (dao *AppDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
+func (dao *NetDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
 	return dao.Ctx(ctx).Transaction(ctx, f)
 }
