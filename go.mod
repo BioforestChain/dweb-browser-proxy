@@ -9,7 +9,11 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/json-iterator/go v1.1.12
+	github.com/olebedev/config v0.0.0-20220822221314-86fa169f9f99
+	github.com/redis/go-redis/v9 v9.0.5
+	github.com/satori/go.uuid v1.2.0
 	golang.org/x/time v0.3.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -30,7 +34,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/redis/go-redis/v9 v9.0.5 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	go.opentelemetry.io/otel v1.18.0 // indirect
 	go.opentelemetry.io/otel/metric v1.18.0 // indirect

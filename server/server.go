@@ -171,10 +171,19 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 	///proxy/pubsub/subscribe_msg
 	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+
 		request := req.(*ipc.Request)
 		log.Println("on request: ", request.ID)
 		url, _ := url.ParseRequestURI(request.URL)
-		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
+
+		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/publish_msg" || (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
+
+			bodyReceiver := request.Body.(*ipc.BodyReceiver)
+			body1 := bodyReceiver.GetMetaBody().Data
+			log.Println("onRequest: ", request.URL, string(body1), ic)
+			log.Printf("subscribe_msg post body is: %#v\n", request.Body)
+			log.Printf("subscribe_msg Header is %#v\n: ", request.Header)
+
 			body := `{"code": 0, "message": "subscribe_msg"}`
 			res := ipc.NewResponse(
 				request.ID,
