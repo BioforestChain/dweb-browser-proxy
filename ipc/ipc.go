@@ -70,7 +70,7 @@ func NewBaseIPC(opts ...Option) *BaseIPC {
 	ipc.msgSignal = ipc.createSignal(false)
 
 	if ipc.reqTimeout == 0 {
-		ipc.reqTimeout = 300 * time.Second
+		ipc.reqTimeout = 30 * time.Second
 	}
 
 	return ipc
