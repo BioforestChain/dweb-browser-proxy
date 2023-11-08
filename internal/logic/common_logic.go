@@ -18,7 +18,7 @@ func GetLastPage(total int64, limit int) int {
 	return int(lastPage)
 }
 
-// InitCodion 初始化分页
+// InitCondition 初始化分页
 //
 //	@Description:
 //	@param initPage
@@ -26,7 +26,7 @@ func GetLastPage(total int64, limit int) int {
 //	@return page
 //	@return limit
 //	@return offset
-func InitCodion(initPage, initLimit int) (page, limit, offset int) {
+func InitCondition(initPage, initLimit int) (page, limit, offset int) {
 	page = initPage
 	if initPage == 0 {
 		page = 1

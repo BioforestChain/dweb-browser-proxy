@@ -15,6 +15,8 @@ type (
 	IApp interface {
 		CreateAppModule(ctx context.Context, in model.AppModuleCreateInput) (entity *v1.ClientAppModuleRegRes, err error)
 		CreateAppInfo(ctx context.Context, in model.AppModuleInfoCreateInput) (err error)
+		DelAppById(ctx context.Context, in model.AppModuleDelInput) (err error)
+		GetAppModuleList(ctx context.Context, in model.AppModuleListQueryInput) (entities []*v1.ClientAppModuleDetailRes, total int, err error)
 	}
 )
 

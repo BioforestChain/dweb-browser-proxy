@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model"
@@ -23,7 +25,7 @@ func New() service.IApp {
 	return &sApp{}
 }
 
-// Create net account.
+// Create App account.
 //
 //	@Description:
 //	@receiver s
@@ -55,9 +57,13 @@ func (s *sApp) CreateAppModule(ctx context.Context, in model.AppModuleCreateInpu
 	if err != nil {
 		return nil, err
 	}
-	return &v1.ClientAppModuleRegRes{
-		getPriKey,
-		in.NetId, in.AppId}, err
+	findOne, err := dao.App.Ctx(ctx).One(g.Map{
+		"id =": getPriKey,
+	})
+	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return entity, nil
 }
 
 //
@@ -171,4 +177,44 @@ func (s *sApp) CreateAppInfo(ctx context.Context, in model.AppModuleInfoCreateIn
 		}
 		return nil
 	})
+}
+
+// DelAppById
+//
+//	@Description: 逻辑删除
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return err
+func (s *sApp) DelAppById(ctx context.Context, in model.AppModuleDelInput) (err error) {
+	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
+		_, err = dao.App.Ctx(ctx).Data(do.App{
+			//DeletedAt: gtime.Now().Format("Y-m-d H:i:s"),
+			DeletedAt: new(gtime.Time),
+		}).Where(g.Map{"id = ": in.Id}).Delete()
+		//}).Where(g.Map{"id = ": in.Id}).Update()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *sApp) GetAppModuleList(ctx context.Context, in model.AppModuleListQueryInput) (entities []*v1.ClientAppModuleDetailRes, total int, err error) {
+	condition := g.Map{
+		"user_name like ?": "%" + in.UserName + "%",
+		"net_id like ?":    "%" + in.NetId + "%",
+		"app_id like ?":    "%" + in.AppId + "%",
+		"app_name like ?":  "%" + in.AppName + "%",
+		"is_online =":      in.IsOnline,
+		"is_install =":     in.IsInstall,
+	}
+	all, total, err := dao.App.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).OrderDesc("id").AllAndCount(true)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
+		return nil, 0, err
+	}
+	return entities, total, err
 }

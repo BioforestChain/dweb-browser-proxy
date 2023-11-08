@@ -25,7 +25,8 @@ type NetColumns struct {
 	Domain    string // 域名
 	Remark    string // 备注信息
 	Timestamp string // 时间戳
-	InOnline  string // 上线：1上线，0下线
+	Port      string // 端口
+	IsOnline  string // 上线：1上线，0下线
 	CreatedAt string // Created Time
 	UpdateAt  string // Updated Time
 	DeletedAt string // Deleted Time
@@ -38,7 +39,8 @@ var netColumns = NetColumns{
 	Domain:    "domain",
 	Remark:    "remark",
 	Timestamp: "timestamp",
-	InOnline:  "in_online",
+	Port:      "port",
+	IsOnline:  "is_online",
 	CreatedAt: "created_at",
 	UpdateAt:  "update_at",
 	DeletedAt: "deleted_at",

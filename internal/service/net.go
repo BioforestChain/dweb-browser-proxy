@@ -9,11 +9,14 @@ import (
 	"context"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/model"
+	//"proxyServer/internal/model/do"
 )
 
 type (
 	INet interface {
-		CreateNetModule(ctx context.Context, in model.NetModuleCreateInputReq) (entity *v1.ClientNetModuleRegRes, err error)
+		CreateNetModule(ctx context.Context, in model.NetModuleCreateInput) (entity *v1.ClientNetModuleDetailRes, err error)
+		GetNetModuleDetailById(ctx context.Context, in model.NetModuleDetailInput) (entity *v1.ClientNetModuleDetailRes, err error)
+		GetNetModuleList(ctx context.Context, in model.NetModuleListQueryInput) (entities []*v1.ClientNetModuleDetailRes, total int, err error)
 		IsDomainExist(ctx context.Context, Domain string) (bool, error)
 	}
 )

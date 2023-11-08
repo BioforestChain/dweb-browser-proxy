@@ -11,6 +11,7 @@ import (
 	"proxyServer/internal/model"
 	"proxyServer/internal/model/do"
 	"proxyServer/internal/service"
+	"strings"
 	"time"
 )
 
@@ -27,68 +28,141 @@ func New() service.INet {
 
 // Create net account.
 //
+//	@Description: create and edit
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return entity
+//	@return err
+func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInput) (entity *v1.ClientNetModuleDetailRes, err error) {
+
+	var (
+		getPriKey    int64
+		available    bool
+		result       sql.Result
+		nowTimestamp = time.Now().Unix()
+	)
+	// secret checks.
+	secret, _ := g.Cfg().Get(ctx, "auth.secret")
+	if in.Secret != secret.String() {
+		return nil, gerror.Newf(`Sorry, your secret "%s" is wrong yet`, in.Secret)
+	}
+	rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+	domain := in.Domain + "." + rootDomainName.String()
+	if in.RootDomain != rootDomainName.String() {
+		return nil, gerror.Newf(`Sorry, your rootDomain "%s" is wrong yet`, in.RootDomain)
+	}
+
+	if in.Id > 0 {
+		//更新
+		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+			result, err = dao.Net.Ctx(ctx).Data(do.Net{
+				Id:        in.Id,
+				NetId:     in.NetId,
+				Timestamp: nowTimestamp,
+				Port:      in.Port,
+				Domain:    domain,
+			}).Where(g.Map{
+				"id =": in.Id,
+			}).Save()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		getPriKey = in.Id
+	} else {
+		// IsDomain checks.
+		available, err = s.IsDomainExist(ctx, domain)
+		if err != nil {
+			return nil, err
+		}
+		if available {
+			return nil, gerror.Newf(`Sorry, your domain "%s" has been registered yet`, in.Domain)
+		}
+		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+			result, err = dao.Net.Ctx(ctx).Data(do.Net{
+				NetId:     in.NetId,
+				Timestamp: nowTimestamp,
+				Port:      in.Port,
+				Domain:    domain,
+			}).Insert()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		getPriKey, err = result.LastInsertId()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	findOne, err := dao.Net.Ctx(ctx).One(g.Map{
+		"id =": getPriKey,
+	})
+	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	entity.RootDomain = rootDomainName.String()
+	entity.PrefixDomain = in.Domain
+	return entity, nil
+}
+
+// GetNetModuleDetailById
+//
 //	@Description:
 //	@receiver s
 //	@param ctx
 //	@param in
 //	@return entity
 //	@return err
-func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInputReq) (entity *v1.ClientNetModuleRegRes, err error) {
-	var (
-		available    bool
-		result       sql.Result
-		nowTimestamp = time.Now().Unix()
-	)
-	rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
-	domain := in.Domain + "." + rootDomainName.String()
-	// IsDomain checks.
-	available, err = s.IsDomainExist(ctx, domain)
-	if err != nil {
-		return nil, err
-	}
-	if available {
-		return nil, gerror.Newf(`Sorry, your domain "%s" has been registered yet`, in.Domain)
-	}
-	err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		result, err = dao.Net.Ctx(ctx).Data(do.Net{
-			NetId:     in.NetId,
-			Timestamp: nowTimestamp,
-			Domain:    domain,
-		}).Insert()
-		if err != nil {
-			return err
-		}
-		return nil
+func (s *sNet) GetNetModuleDetailById(ctx context.Context, in model.NetModuleDetailInput) (entity *v1.ClientNetModuleDetailRes, err error) {
+	findOne, err := dao.Net.Ctx(ctx).One(g.Map{
+		"id =": in.Id,
 	})
-	getPriKey, err := result.LastInsertId()
-	if err != nil {
+	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	return &v1.ClientNetModuleRegRes{
-		getPriKey,
-		in.NetId}, err
+	rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+	parts := strings.Split(entity.Domain, ".")
+	entity.RootDomain = rootDomainName.String()
+	// 取第一个子串
+	entity.PrefixDomain = parts[0]
+	return entity, err
 }
 
+// GetNetModuleList
 //
-//// GetUserList
-////
-////	@Description:
-////	@receiver s
-////	@param ctx
-////	@param in
-////	@return entities
-////	@return total
-////	@return err
-//func (s *sNet) GetNetList(ctx context.Context, in model.UserQueryInput) (entities []*do.Net, total int, err error) {
-//	all, total, err := dao.Net.Ctx(ctx).Offset(in.Offset).Limit(in.Limit).AllAndCount(true)
-//	if err != nil {
-//		return nil, 0, err
-//	}
-//	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
-//		return nil, 0, err
-//	}
-//	return entities, total, err
-//}
+//	@Description:
+//	@receiver s
+//	@param ctx
+//	@param in
+//	@return entities
+//	@return total
+//	@return err
+func (s *sNet) GetNetModuleList(ctx context.Context, in model.NetModuleListQueryInput) (entities []*v1.ClientNetModuleDetailRes, total int, err error) {
+
+	condition := g.Map{
+		"domain like ?": "%" + in.Domain + "%",
+		"net_id like ?": "%" + in.NetId + "%",
+		"is_online =":   in.IsOnline,
+	}
+	all, total, err := dao.Net.Ctx(ctx).Where(condition).Offset(in.Offset).Limit(in.Limit).OrderDesc("id").AllAndCount(true)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
+		return nil, 0, err
+	}
+	rootDomainName, _ := g.Cfg().Get(ctx, "root_domain.name")
+	for key, entity := range entities {
+		parts := strings.Split(entity.Domain, ".")
+		entities[key].RootDomain = rootDomainName.String()
+		entities[key].PrefixDomain = parts[0]
+	}
+	return entities, total, err
+}
 
 //
 //// GetDomainInfo

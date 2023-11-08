@@ -15,7 +15,8 @@ type Net struct {
 	Domain    string      `json:"domain"    description:"域名"`
 	Remark    string      `json:"remark"    description:"备注信息"`
 	Timestamp int         `json:"timestamp" description:"时间戳"`
-	InOnline  int         `json:"inOnline"  description:"上线：1上线，0下线"`
+	Port      int         `json:"port"      description:"端口"`
+	IsOnline  int         `json:"isOnline"  description:"上线：1上线，0下线"`
 	CreatedAt *gtime.Time `json:"createdAt" description:"Created Time"`
 	UpdateAt  *gtime.Time `json:"updateAt"  description:"Updated Time"`
 	DeletedAt *gtime.Time `json:"deletedAt" description:"Deleted Time"`

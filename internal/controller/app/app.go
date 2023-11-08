@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gogf/gf/v2/frame/g"
 	v1 "proxyServer/api/client/v1"
+	commonLogic "proxyServer/internal/logic"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
 )
@@ -23,16 +25,28 @@ func New() *Controller {
 //	@param req
 //	@return res
 //	@return err
-
 func (c *Controller) AppModuleReg(ctx context.Context, req *v1.ClientAppModuleRegReq) (res *v1.ClientAppModuleRegRes, err error) {
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("AppModuleReg Validator", err)
 	}
-	res, err = service.App().CreateAppModule(ctx, model.AppModuleCreateInput{
-		NetId:    req.NetId,
-		AppId:    req.AppId,
-		UserName: req.UserName,
-		AppName:  req.AppName,
+	var appInfos []map[string]string
+	json.Unmarshal([]byte(req.ArrayAppIdInfo), &appInfos)
+	for _, v := range appInfos {
+		res, err = service.App().CreateAppModule(ctx, model.AppModuleCreateInput{
+			NetId:    v["netId"],
+			AppId:    v["appId"],
+			UserName: v["userName"],
+			AppName:  v["appName"],
+		})
+	}
+	return
+}
+func (c *Controller) AppModuleDel(ctx context.Context, req *v1.ClientAppModuleDelReq) (res *v1.ClientAppModuleRegRes, err error) {
+	if err := g.Validator().Data(req).Run(ctx); err != nil {
+		fmt.Println("AppModuleDel Validator", err)
+	}
+	err = service.App().DelAppById(ctx, model.AppModuleDelInput{
+		Id: req.Id,
 	})
 	return
 }
@@ -60,4 +74,31 @@ func (c *Controller) ClientAppInfoReport(ctx context.Context, req *v1.ClientAppI
 		Remark:    req.Remark,
 	})
 	return
+}
+
+// AppModuleList
+//
+//	@Description:
+//	@receiver c
+//	@param ctx
+//	@param req
+//	@return res
+//	@return err
+func (c *Controller) AppModuleList(ctx context.Context, req *v1.ClientAppModuleListReq) (res *v1.ClientAppModuleListRes, err error) {
+	condition := model.AppModuleListQueryInput{}
+	condition.Page, condition.Limit, condition.Offset = commonLogic.InitCondition(req.Page, req.Limit)
+	condition.UserName = req.UserName
+	condition.NetId = req.NetId
+	condition.AppId = req.AppId
+	condition.AppName = req.AppName
+	condition.IsInstall = req.IsInstall
+	condition.IsOnline = req.IsOnline
+
+	list, total, err := service.App().GetAppModuleList(ctx, condition)
+	res = new(v1.ClientAppModuleListRes)
+	res.List = list
+	res.Total = total
+	res.Page = condition.Page
+	res.LastPage = commonLogic.GetLastPage(int64(total), condition.Limit)
+	return res, err
 }

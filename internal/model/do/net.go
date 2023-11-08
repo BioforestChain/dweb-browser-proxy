@@ -12,13 +12,14 @@ import (
 // Net is the golang structure of table net for DAO operations like Where/Data.
 type Net struct {
 	g.Meta    `orm:"table:net, do:true"`
-	Id        interface{} //
-	NetId     interface{} // 网络模块id
-	Domain    interface{} // 域名
-	Remark    interface{} // 备注信息
-	Timestamp interface{} // 时间戳
-	InOnline  interface{} // 上线：1上线，0下线
-	CreatedAt *gtime.Time // Created Time
-	UpdateAt  *gtime.Time // Updated Time
-	DeletedAt *gtime.Time // Deleted Time
+	Id        interface{} `json:"id"`                   //
+	NetId     interface{} `json:"net_id"`               // 网络模块id
+	Domain    interface{} `json:"domain"`               // 域名
+	Remark    interface{} `json:"remark"`               // 备注信息
+	Timestamp interface{} `json:"timestamp"`            // 时间戳
+	Port      interface{} `json:"port"`                 // 端口
+	IsOnline  interface{} `json:"is_online"`            // 上线：1上线，0下线
+	CreatedAt *gtime.Time `json:"created_at"`           // Created Time
+	UpdateAt  *gtime.Time `json:"update_at"`            // Updated Time
+	DeletedAt *gtime.Time `json:"deleted_at,omitempty"` // Deleted Time
 }

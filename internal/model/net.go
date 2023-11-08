@@ -9,18 +9,26 @@
 */
 package model
 
-import "proxyServer/internal/dao"
+import (
+	"proxyServer/internal/dao"
+)
 
-type NetModuleCreateInputReq struct {
-	NetId  string
-	Domain string
+type NetModuleCreateInput struct {
+	Id         int64
+	NetId      string
+	Domain     string
+	RootDomain string
+	Secret     string
+	Port       uint32
 }
-
-type NetQueryInput struct {
+type NetModuleDetailInput struct {
+	Id uint32
+}
+type NetModuleListQueryInput struct {
 	dao.PaginationSearch
-	Id     uint32
-	Domain string
-	Name   string
+	Domain   string `json:"domain"   in:"query" dc:"域名"`
+	NetId    string `json:"net_id"   in:"query" dc:"网络模块id"`
+	IsOnline uint32 `json:"is_online"   in:"query" dc:"是否上线"`
 }
 type DomainReq struct {
 	Domain string
