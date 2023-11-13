@@ -10,30 +10,19 @@ import (
 )
 
 // App is the golang structure of table app for DAO operations like Where/Data.
-//type App struct {
-//	g.Meta    `orm:"table:app, do:true"`
-//	Id        interface{} //
-//	UserId    interface{} // 用户id
-//	Name      interface{} // 名称
-//	Domain    interface{} // 域名
-//	Remark    interface{} // 备注信息
-//	Timestamp interface{} // 时间戳
-//	CreatedAt *gtime.Time // Created Time
-//	UpdateAt  *gtime.Time // Updated Time
-//	DeletedAt *gtime.Time // Deleted Time
-//}
-
 type App struct {
-	g.Meta         `orm:"table:app, do:true"`
-	Id             interface{} `json:"id"`
-	UserId         interface{} `json:"user_id"`              // 用户id
-	DeviceId       interface{} `json:"device_id"`            // 设备id
-	Name           interface{} `json:"name"`                 // 名称
-	Identification interface{} `json:"identification"`       // app唯一标识
-	Domain         interface{} `json:"domain"`               // 域名
-	Remark         interface{} `json:"remark,omitempty"`     // 备注信息
-	Timestamp      interface{} `json:"timestamp"`            // 时间戳
-	CreatedAt      *gtime.Time `json:"created_at,omitempty"` // Created Time
-	UpdateAt       *gtime.Time `json:"update_at,omitempty"`  // Updated Time
-	DeletedAt      *gtime.Time `json:"deleted_at,omitempty"` // Deleted Time
+	g.Meta    `orm:"table:app, do:true"`
+	Id        interface{} //
+	AppId     interface{} // app模块唯一标识
+	NetId     interface{} // 网络模块一标识
+	UserName  interface{} // 用户名称
+	AppName   interface{} // 模块名称
+	Timestamp interface{} // 时间戳
+	CreatedAt *gtime.Time // Created Time
+	UpdateAt  *gtime.Time // Updated Time
+	DeletedAt *gtime.Time // Deleted Time
+	CumReqNum interface{} // 累计被请求次数
+	IsInstall interface{} // 是否安装：1安装，0（未安装）卸载
+	IsOnline  interface{} // 是否在线：1在线，0不在线
+	PublicKey interface{} // 公钥
 }

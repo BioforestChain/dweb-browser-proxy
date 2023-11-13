@@ -21,27 +21,35 @@ type AppDao struct {
 // AppColumns defines and stores column names for table app.
 type AppColumns struct {
 	Id        string //
-	UserId    string // 用户id
-	Name      string // 名称
-	Domain    string // 域名
-	Remark    string // 备注信息
+	AppId     string // app模块唯一标识
+	NetId     string // 网络模块一标识
+	UserName  string // 用户名称
+	AppName   string // 模块名称
 	Timestamp string // 时间戳
 	CreatedAt string // Created Time
 	UpdateAt  string // Updated Time
 	DeletedAt string // Deleted Time
+	CumReqNum string // 累计被请求次数
+	IsInstall string // 是否安装：1安装，0（未安装）卸载
+	IsOnline  string // 是否在线：1在线，0不在线
+	PublicKey string // 公钥
 }
 
 // appColumns holds the columns for table app.
 var appColumns = AppColumns{
 	Id:        "id",
-	UserId:    "user_id",
-	Name:      "name",
-	Domain:    "domain",
-	Remark:    "remark",
+	AppId:     "app_id",
+	NetId:     "net_id",
+	UserName:  "user_name",
+	AppName:   "app_name",
 	Timestamp: "timestamp",
 	CreatedAt: "created_at",
 	UpdateAt:  "update_at",
 	DeletedAt: "deleted_at",
+	CumReqNum: "cum_req_num",
+	IsInstall: "is_install",
+	IsOnline:  "is_online",
+	PublicKey: "public_key",
 }
 
 // NewAppDao creates and returns a new DAO object for table data access.

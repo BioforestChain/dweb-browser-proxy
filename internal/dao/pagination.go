@@ -10,5 +10,5 @@ type Pagination struct {
 type PaginationSearch struct {
 	Page   int `form:"page"`
 	Limit  int `form:"limit"`
-	Offset int `form:"Offset"`
+	Offset int `form:"offset"`
 }

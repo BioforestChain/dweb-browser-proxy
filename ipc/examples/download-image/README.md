@@ -1,0 +1,1 @@
+## client发起ipc request，下载图片，server返回指定图片并保存至参数-o指定路径，默认根目录

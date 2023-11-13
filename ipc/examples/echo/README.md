@@ -1,0 +1,1 @@
+## client端发送ipc request请求，打印接收的response

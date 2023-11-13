@@ -11,24 +11,8 @@ package model
 
 import "proxyServer/internal/dao"
 
-type UserCreateInput struct {
-	Name           string
-	PublicKey      string
-	Identification string
-	Timestamp      string
-	Remark         string
-}
-
-type UserDomainCreateInput struct {
-	UserId               uint32
-	UserName             string
-	AppName              string
-	AppIdentification    string
-	DeviceIdentification string
-	Domain               string
-	Timestamp            string
-	Remark               string
-}
+// UserAppInfoCreateInput
+// @Description: Domain,AppInfo
 
 type UserQueryInput struct {
 	dao.PaginationSearch
@@ -39,6 +23,21 @@ type UserQueryInput struct {
 type AppQueryInput struct {
 	UserName             string
 	AppName              string
-	AppIdentification    string
+	AppId                string
 	DeviceIdentification string
+}
+
+type CheckUrlInput struct {
+	Host string
+}
+type CheckDomainInput struct {
+	Domain string
+	UserId uint32
+	AppId  string
+}
+type CheckDeviceInput struct {
+	DeviceIdentification string
+}
+type CheckUserInput struct {
+	UserIdentification string
 }

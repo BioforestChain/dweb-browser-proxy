@@ -11,12 +11,16 @@ import (
 // App is the golang structure for table app.
 type App struct {
 	Id        int         `json:"id"        description:""`
-	UserId    int64       `json:"userId"    description:"用户id"`
-	Name      string      `json:"name"      description:"名称"`
-	Domain    string      `json:"domain"    description:"域名"`
-	Remark    string      `json:"remark"    description:"备注信息"`
+	AppId     string      `json:"appId"     description:"app模块唯一标识"`
+	NetId     string      `json:"netId"     description:"网络模块一标识"`
+	UserName  string      `json:"userName"  description:"用户名称"`
+	AppName   string      `json:"appName"   description:"模块名称"`
 	Timestamp string      `json:"timestamp" description:"时间戳"`
 	CreatedAt *gtime.Time `json:"createdAt" description:"Created Time"`
 	UpdateAt  *gtime.Time `json:"updateAt"  description:"Updated Time"`
 	DeletedAt *gtime.Time `json:"deletedAt" description:"Deleted Time"`
+	CumReqNum int         `json:"cumReqNum" description:"累计被请求次数"`
+	IsInstall int         `json:"isInstall" description:"是否安装：1安装，0（未安装）卸载"`
+	IsOnline  int         `json:"isOnline"  description:"是否在线：1在线，0不在线"`
+	PublicKey string      `json:"publicKey" description:"公钥"`
 }
