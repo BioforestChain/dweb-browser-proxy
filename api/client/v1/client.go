@@ -106,7 +106,7 @@ type ClientAppInfoReportRes struct {
 }
 
 type ClientAppModuleDelReq struct {
-	g.Meta `path:"/user/app-module-del" tags:"ClientAppModuleDelService" method:"get" summary:"Del app-module by id"`
+	g.Meta `path:"/user/app-module-del" tags:"ClientAppModuleDelService" method:"post" summary:"Del app-module by id"`
 	Id     int64 `v:"required"`
 }
 
