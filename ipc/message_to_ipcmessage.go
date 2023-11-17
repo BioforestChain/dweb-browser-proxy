@@ -11,12 +11,12 @@ var ErrUnMarshalObjectToIpcMessage = errors.New("unmarshal message failed when o
 
 func objectToIpcMessage(data []byte, ipc IPC) (msg any, err error) {
 	var m = struct {
-		Type      MessageType
-		Name      string
-		Data      []byte
-		Encoding  DataEncoding
-		StreamID  string
-		Bandwidth *int
+		Type      MessageType  `json:"type"`
+		Name      string       `json:"name"`
+		Data      []byte       `json:"data"`
+		Encoding  DataEncoding `json:"encoding"`
+		StreamID  string       `json:"stream_id"`
+		Bandwidth *int         `json:"bandwidth"`
 	}{}
 
 	var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -54,8 +54,6 @@ func objectToIpcMessage(data []byte, ipc IPC) (msg any, err error) {
 			ipc,
 		)
 		fmt.Printf("%s Input-> Response: %+v\n", time.Now(), msg)
-	case EVENT:
-		msg = NewEvent(m.Name, m.Data, m.Encoding)
 	case STREAM_DATA:
 		v := NewStreamData(m.StreamID, m.Data, m.Encoding)
 		msg = v
@@ -72,6 +70,8 @@ func objectToIpcMessage(data []byte, ipc IPC) (msg any, err error) {
 	case STREAM_END:
 		msg = NewStreamEnd(m.StreamID)
 		fmt.Printf("%s Input-> %+v\n", time.Now(), msg)
+	case EVENT:
+		msg = NewEvent(m.Name, m.Data, m.Encoding)
 	}
 
 	return

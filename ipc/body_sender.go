@@ -55,7 +55,7 @@ func (bs *BodySender) emitStreamPull(info *usedIpcInfo, msg *StreamPulling) {
 func (bs *BodySender) emitStreamPaused(info *usedIpcInfo, msg *StreamPaused) {
 	// 更新保险限制
 	info.bandwidth = -1
-	info.fuse = *msg.fuse
+	info.fuse = *msg.Fuse
 
 	// 如果所有的读取者都暂停了，那么就触发暂停
 	paused := true

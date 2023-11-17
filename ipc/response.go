@@ -6,12 +6,12 @@ import (
 )
 
 type Response struct {
-	ReqID      uint64
-	StatusCode int
-	Header     Header
-	Body       BodyInter // *Body | *BodySender | *BodyReceiver
-	Ipc        IPC
-	Type       MessageType
+	ReqID      uint64      `json:"req_id"`
+	StatusCode int         `json:"statusCode"`
+	Header     Header      `json:"headers"`
+	Body       BodyInter   `json:"body"` // *Body | *BodySender | *BodyReceiver
+	Ipc        IPC         `json:"ipc"`
+	Type       MessageType `json:"type"`
 	resMessage *ResMessage
 }
 
@@ -69,7 +69,7 @@ func FromResponseStream(reqID uint64, statusCode int, header Header, stream *Rea
 type ResMessage struct {
 	ReqID      uint64            `json:"req_id"`
 	StatusCode int               `json:"statusCode"`
-	Header     map[string]string `json:"header"`
+	Header     map[string]string `json:"headers"`
 	MetaBody   *MetaBody         `json:"metaBody"`
 	Type       MessageType       `json:"type"`
 }

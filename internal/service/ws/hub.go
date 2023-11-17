@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"sync"
 )
 
@@ -39,14 +40,15 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client.ID] = client
+			log.Println("ws hub: ", h.clients)
 		case client := <-h.unregister:
 			if _, ok := h.clients[client.ID]; ok {
 				//结束,发送信号
-				h.EndSyncCond.L.Lock()
-				//atomic.StoreInt32(&h.Shutdown, 1)
-				h.Shutdown <- struct{}{}
-				h.EndSyncCond.Signal()
-				h.EndSyncCond.L.Unlock()
+				//h.EndSyncCond.L.Lock()
+				////atomic.StoreInt32(&h.Shutdown, 1)
+				//h.Shutdown <- struct{}{}
+				//h.EndSyncCond.Signal()
+				//h.EndSyncCond.L.Unlock()
 				delete(h.clients, client.ID)
 				//close(client.send)
 			}

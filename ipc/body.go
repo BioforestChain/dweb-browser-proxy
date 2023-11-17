@@ -116,10 +116,10 @@ func (b *Body) read(p []byte, src []byte) (int, error) {
 }
 
 type BodyHub struct {
-	Data   any // 类型是 string | []byte | ReadableStream
-	Text   *string
-	Stream *ReadableStream
-	U8a    []byte
+	Data   any             `json:"data"` // 类型是 string | []byte | ReadableStream
+	Text   *string         `json:"text"`
+	Stream *ReadableStream `json:"stream"`
+	U8a    []byte          `json:"u8a"`
 }
 
 // NewBodyHub

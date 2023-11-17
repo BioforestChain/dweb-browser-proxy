@@ -3,11 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/net/goai"
-	"github.com/gogf/gf/v2/os/gcmd"
-	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	v1 "proxyServer/api/client/v1"
@@ -15,16 +10,21 @@ import (
 	"proxyServer/internal/controller/app"
 	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/chat"
+	"proxyServer/internal/controller/net"
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
-	//"proxyServer/internal/logic/net"
-	"proxyServer/internal/controller/net"
 	helperIPC "proxyServer/internal/helper/ipc"
 	"proxyServer/internal/logic/middleware"
 	"proxyServer/internal/packed"
 	ws "proxyServer/internal/service/ws"
 	"sync"
 	"time"
+
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/net/goai"
+	"github.com/gogf/gf/v2/os/gcmd"
+	"golang.org/x/time/rate"
 )
 
 func MiddlewareLimitHandler() func(r *ghttp.Request) {
@@ -72,6 +72,7 @@ var (
 			//s.SetRouteOverWrite(true)
 			hub := ws.NewHub()
 			go hub.Run()
+
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(
 					MiddlewareLimitHandler(),
@@ -84,6 +85,7 @@ var (
 					req.Method = r.Method
 					req.URL = r.GetUrl()
 					req.Host = r.GetHost()
+					// TODO 需要优化body https://medium.com/@owlwalks/sending-big-file-with-minimal-memory-in-golang-8f3fc280d2c
 					req.Body = r.GetBody()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = r.Get("client_id").String()
@@ -100,7 +102,7 @@ var (
 							r.Response.WriteStatus(400, "请求出错")
 						}
 					} else {
-						data, err := helperIPC.ReadStreamWithTimeout(bodyStream, 10*time.Second)
+						data, err := helperIPC.ReadStreamWithTimeout(bodyStream, 100*time.Second)
 						if err != nil {
 							r.Response.WriteStatus(400, err)
 						} else {
@@ -131,7 +133,7 @@ var (
 						chat.New(hub),
 					)
 				})
-				s.BindHandler("/ws", func(r *ghttp.Request) {
+				group.GET("/ws", func(r *ghttp.Request) {
 					//
 					ws.ServeWs(hub, r.Response.Writer, r.Request)
 				})
@@ -156,6 +158,7 @@ var (
 				//	})
 				//})
 			})
+
 			enhanceOpenAPIDoc(s)
 			s.Run()
 			return nil

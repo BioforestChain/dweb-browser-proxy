@@ -3,10 +3,10 @@ package ipc
 import "fmt"
 
 type Event struct {
-	Type     MessageType
-	Name     string
-	Data     any
-	Encoding DataEncoding
+	Type     MessageType  `json:"type"`
+	Name     string       `json:"name"`
+	Data     any          `json:"data"`
+	Encoding DataEncoding `json:"encoding"`
 }
 
 func NewEvent(name string, data any, encoding DataEncoding) *Event {
