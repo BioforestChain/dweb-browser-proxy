@@ -55,7 +55,7 @@ const (
 	// END = 1
 
 	// REQUEST 类型：请求
-	REQUEST MessageType = iota + 1
+	REQUEST MessageType = iota
 
 	// RESPONSE 类型：响应
 	RESPONSE

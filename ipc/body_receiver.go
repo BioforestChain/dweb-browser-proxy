@@ -85,7 +85,9 @@ func metaToStream(metaBody *MetaBody, ipc IPC) *ReadableStream {
 			if streamMsg, ok := IsStream(data); ok && streamMsg.StreamID == streamID {
 				switch streamMsg.Type {
 				case STREAM_DATA:
-					if d := DataToBinary(streamMsg.Data, streamMsg.Encoding); d != nil {
+					if streamMsg.Encoding == BASE64 {
+						_ = ctrl.Enqueue(streamMsg.Data)
+					} else if d := DataToBinary(string(streamMsg.Data), streamMsg.Encoding); d != nil {
 						_ = ctrl.Enqueue(d)
 					}
 				case STREAM_END:

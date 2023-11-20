@@ -3,9 +3,9 @@ package ipc
 import "fmt"
 
 type StreamPulling struct {
-	Type      MessageType
-	StreamID  string
-	Bandwidth *int
+	Type      MessageType `json:"type"`
+	StreamID  string      `json:"stream_id"`
+	Bandwidth *int        `json:"bandwidth"`
 }
 
 // NewStreamPulling

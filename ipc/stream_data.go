@@ -6,10 +6,10 @@ import (
 )
 
 type StreamData struct {
-	Type     MessageType
-	StreamID string
-	Data     []byte
-	Encoding DataEncoding
+	Type     MessageType  `json:"type"`
+	StreamID string       `json:"stream_id"`
+	Data     []byte       `json:"data"`
+	Encoding DataEncoding `json:"encoding"`
 }
 
 func NewStreamData(streamID string, data []byte, encoding DataEncoding) *StreamData {

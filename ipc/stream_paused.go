@@ -3,9 +3,9 @@ package ipc
 import "fmt"
 
 type StreamPaused struct {
-	Type     MessageType
-	StreamID string
-	fuse     *int
+	Type     MessageType `json:"type"`
+	StreamID string      `json:"stream_id"`
+	Fuse     *int        `json:"fuse"`
 }
 
 // NewStreamPaused 保险丝次数
@@ -21,13 +21,13 @@ func NewStreamPaused(streamID string, fuse *int) *StreamPaused {
 	}
 
 	if fuse == nil {
-		*sp.fuse = 1
+		*sp.Fuse = 1
 	} else {
-		sp.fuse = fuse
+		sp.Fuse = fuse
 	}
 	return sp
 }
 
 func (s *StreamPaused) String() string {
-	return fmt.Sprintf("StreamPaused - Type: %d, StreamID: %s, fuse: %p", s.Type, s.StreamID, s.fuse)
+	return fmt.Sprintf("StreamPaused - Type: %d, StreamID: %s, fuse: %p", s.Type, s.StreamID, s.Fuse)
 }

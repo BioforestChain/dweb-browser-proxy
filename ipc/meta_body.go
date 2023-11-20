@@ -8,11 +8,11 @@ import (
 
 type MetaBody struct {
 	Type        MetaBodyType `json:"type"`
-	SenderUID   uint64       `json:"sender_uid"`
-	ReceiverUID uint64       `json:"receiver_uid"`
+	SenderUID   uint64       `json:"senderUid"`
+	ReceiverUID uint64       `json:"receiverUid"`
 	Data        []byte       `json:"data"` // 注：json.Marshal时会把slice编码成base64
-	StreamID    string       `json:"stream_id"`
-	MetaID      string       `json:"meta_id"`
+	StreamID    string       `json:"streamId"`
+	MetaID      string       `json:"metaId"`
 }
 
 func NewMetaBody(senderUID uint64, data []byte, options ...MetaBodyOption) *MetaBody {

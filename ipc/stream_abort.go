@@ -3,8 +3,8 @@ package ipc
 import "fmt"
 
 type StreamAbort struct {
-	Type     MessageType
-	StreamID string
+	Type     MessageType `json:"type"`
+	StreamID string      `json:"stream_id"`
 }
 
 func NewStreamAbort(streamID string) *StreamAbort {

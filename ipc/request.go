@@ -6,13 +6,13 @@ import (
 )
 
 type Request struct {
-	ID         uint64
-	URL        string
-	Method     METHOD
-	Header     Header
-	Body       BodyInter // *Body | *BodySender | *BodyReceiver
-	Ipc        IPC
-	Type       MessageType
+	ID         uint64      `json:"req_id"`
+	URL        string      `json:"url"`
+	Method     METHOD      `json:"method"`
+	Header     Header      `json:"headers"`
+	Body       BodyInter   `json:"body"` // *Body | *BodySender | *BodyReceiver
+	Ipc        IPC         `json:"ipc"`
+	Type       MessageType `json:"type"`
 	reqMessage *ReqMessage
 }
 
@@ -103,7 +103,7 @@ type ReqMessage struct {
 	ReqID    uint64            `json:"req_id"`
 	Method   METHOD            `json:"method"`
 	URL      string            `json:"url"`
-	Header   map[string]string `json:"header"`
+	Header   map[string]string `json:"headers"`
 	MetaBody *MetaBody         `json:"metaBody"`
 	Type     MessageType       `json:"type"`
 }

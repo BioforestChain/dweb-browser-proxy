@@ -12,13 +12,16 @@ import (
 
 const (
 	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
+	//writeWait = 10 * time.Second
+	writeWait = 1000 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 600 * time.Second
+	//pongWait = 7 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
+	//pingPeriod = 4 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 1024 * 8
@@ -76,7 +79,7 @@ func (c *Client) readPump() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Println("ws readPump err: ", err)
+			log.Println("readPump err: ", err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
@@ -98,13 +101,14 @@ func (c *Client) readPump() {
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
+	reader := c.ipc.GetOutputStreamReader()
+
 	defer func() {
 		ticker.Stop()
 		//_ = c.conn.Close()
 		c.Close()
+		reader.Cancel()
 	}()
-
-	reader := c.ipc.GetOutputStreamReader()
 
 	go func() {
 		for {
@@ -126,7 +130,7 @@ func (c *Client) writePump() {
 			return
 		}
 
-		w, err := c.conn.NextWriter(websocket.TextMessage)
+		w, err := c.conn.NextWriter(websocket.BinaryMessage)
 		if err != nil {
 			return
 		}
@@ -167,6 +171,11 @@ func (c *Client) Close() {
 
 // ServeWs handles websocket requests from the peer.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		// Origin header have a pattern that *.xxx.com
+		// TODO return r.Header.Get("Origin") == '*.xxx.com'
+		return true
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
