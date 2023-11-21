@@ -69,8 +69,8 @@ func JWTAuth(r *ghttp.Request) {
 //	@return int64
 //	@return error
 func (s *sMiddleware) GenToken(userID uint32, deviceIdentification string) (string, string, int64, error) {
-	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_token_expire")
-	JwtRefreshTokenExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwt_refresh_token_expire")
+	jwtExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwtTokenExpire")
+	JwtRefreshTokenExpire, _ := g.Cfg().Get(s.Ctx, "auth.jwtRefreshTokenExpire")
 	jwtExpireInt64 := jwtExpire.Int64()
 	JwtRefreshTokenExpireInt64 := JwtRefreshTokenExpire.Int64()
 	c := entity.MyClaims{

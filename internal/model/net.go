@@ -14,12 +14,12 @@ import (
 )
 
 type NetModuleCreateInput struct {
-	Id         int64
-	NetId      string
-	Domain     string
-	RootDomain string
-	Secret     string
-	Port       uint32
+	Id               int64
+	Domain           string
+	Port             uint32
+	Secret           string
+	BroadcastAddress string
+	NetId            string
 }
 type NetModuleDetailInput struct {
 	Id uint32

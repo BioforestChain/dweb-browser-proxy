@@ -20,13 +20,14 @@ import (
 //}
 
 type ClientNetModuleRegReq struct {
-	g.Meta     `path:"/user/net-module-reg" tags:"ClientNetModuleRegService" method:"post" summary:"Sign up a new client net-module"`
-	Id         int64  `v:""`         //
-	Domain     string `v:"required"` //二级域名
-	RootDomain string `v:"required"` //根域名
-	NetId      string `v:"required"` //网络模块id
-	Secret     string `v:"required"` //密钥
-	Port       uint32 `v:"required"` //端口
+	g.Meta           `path:"/user/net-module-reg" tags:"ClientNetModuleRegService" method:"post" summary:"Sign up a new client net-module"`
+	Id               int64  `v:""`         //
+	Domain           string `v:"required"` //服务地址
+	Port             uint32 `v:"required"` //端口
+	Secret           string `v:"required"` //密钥
+	BroadcastAddress string `v:"required"` //广播地址
+	//RootDomain       string `v:"required"` //
+	NetId string `v:"required"` //网络模块id
 }
 type ClientNetModuleDetailReq struct {
 	g.Meta `path:"/user/net-module-detail" tags:"ClientNetModuleDetailService" method:"get" summary:"Get net-module detail by id"`
@@ -34,18 +35,19 @@ type ClientNetModuleDetailReq struct {
 }
 
 type ClientNetModuleDetailRes struct {
-	Id           int64       `json:"id"`               //db 主键id
-	NetId        string      `json:"net_id"`           //网络模块id
-	Domain       string      `json:"domain"`           // 域名
-	RootDomain   string      `json:"root_domain"`      // 根域名
-	PrefixDomain string      `json:"prefix_domain"`    // 根域名
-	Port         interface{} `json:"port"`             // 端口
-	Remark       interface{} `json:"remark,omitempty"` // 备注信息
-	Timestamp    interface{} `json:"timestamp"`        // 时间戳
-	IsOnline     interface{} `json:"is_online"`        // 上线：1上线，0下线
-	CreatedAt    *gtime.Time `json:"created_at"`       // Created Time
-	UpdateAt     *gtime.Time `json:"update_at"`        // Updated Time
-	IsSelected   interface{} `json:"is_selected"`      // 是否选中
+	Id                     int64       `json:"id"`                       //db 主键id
+	NetId                  string      `json:"net_id"`                   //网络模块id
+	Domain                 string      `json:"domain"`                   // 域名
+	RootDomain             string      `json:"root_domain"`              // 根域名
+	PrefixBroadcastAddress string      `json:"prefix_broadcast_address"` // 广播地址前缀
+	BroadcastAddress       string      `json:"broadcast_address"`        // 广播地址
+	Port                   interface{} `json:"port"`                     // 端口
+	Remark                 interface{} `json:"remark,omitempty"`         // 备注信息
+	Timestamp              interface{} `json:"timestamp"`                // 时间戳
+	IsOnline               interface{} `json:"is_online"`                // 上线：1上线，0下线
+	CreatedAt              *gtime.Time `json:"created_at"`               // Created Time
+	UpdateAt               *gtime.Time `json:"update_at"`                // Updated Time
+	IsSelected             interface{} `json:"is_selected"`              // 是否选中
 }
 
 type ClientNetModuleListReq struct {

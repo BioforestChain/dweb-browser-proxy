@@ -3,13 +3,11 @@ package net
 import (
 	"context"
 	"fmt"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	v1 "proxyServer/api/client/v1"
 	commonLogic "proxyServer/internal/logic"
 	"proxyServer/internal/model"
 	"proxyServer/internal/service"
-	"regexp"
 )
 
 type Controller struct{}
@@ -33,11 +31,11 @@ func (c *Controller) NetModuleReg(ctx context.Context, req *v1.ClientNetModuleRe
 		return nil, err
 	}
 	// 参数长度至多长度为9个，数字或者字母组合
-	pattern := regexp.MustCompile(`^[a-z\d]{1,9}$`)
-	matchDomain := pattern.MatchString(req.Domain)
-	if !matchDomain {
-		return nil, gerror.Newf(`Sorry, your domain "%s" must be combination of lowercase letters and numbers,the length is 1 to 9 yet`, req.Domain)
-	}
+	//pattern := regexp.MustCompile(`^[a-z\d]{1,9}$`)
+	//matchDomain := pattern.MatchString(req.Domain)
+	//if !matchDomain {
+	//	return nil, gerror.Newf(`Sorry, your domain "%s" must be combination of lowercase letters and numbers,the length is 1 to 9 yet`, req.Domain)
+	//}
 
 	//rule := "regex:`[a-z\\d]{1,9}$`"
 	//if err := g.Validator().Rules(rule).Data(req.Domain).Run(ctx); err != nil {
@@ -46,12 +44,12 @@ func (c *Controller) NetModuleReg(ctx context.Context, req *v1.ClientNetModuleRe
 	//}
 
 	res, err = service.Net().CreateNetModule(ctx, model.NetModuleCreateInput{
-		Id:         req.Id,
-		NetId:      req.NetId,
-		Domain:     req.Domain,
-		Secret:     req.Secret,
-		Port:       req.Port,
-		RootDomain: req.RootDomain,
+		Id:               req.Id,
+		NetId:            req.NetId,
+		Domain:           req.Domain,
+		Secret:           req.Secret,
+		Port:             req.Port,
+		BroadcastAddress: req.BroadcastAddress,
 	})
 	return
 }
