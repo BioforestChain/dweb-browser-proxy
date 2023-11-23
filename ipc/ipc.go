@@ -224,28 +224,28 @@ func (bipc *BaseIPC) createSignal(autoStart bool) *Signal {
 }
 
 type reqResMap struct {
-	v  map[uint64]chan *Response
+	m  map[uint64]chan *Response
 	mu sync.RWMutex
 }
 
 func newReqResMap() *reqResMap {
-	return &reqResMap{v: make(map[uint64]chan *Response)}
+	return &reqResMap{m: make(map[uint64]chan *Response)}
 }
 
 func (r *reqResMap) get(reqID uint64) (resChan chan *Response, ok bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	resChan, ok = r.v[reqID]
+	resChan, ok = r.m[reqID]
 	return resChan, ok
 }
 
 func (r *reqResMap) getAndDelete(reqID uint64) (resChan chan *Response, ok bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	resChan, ok = r.v[reqID]
+	resChan, ok = r.m[reqID]
 
 	if ok {
-		delete(r.v, reqID)
+		delete(r.m, reqID)
 	}
 	return resChan, ok
 }
@@ -253,19 +253,19 @@ func (r *reqResMap) getAndDelete(reqID uint64) (resChan chan *Response, ok bool)
 func (r *reqResMap) getAll() map[uint64]chan *Response {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.v
+	return r.m
 }
 
 func (r *reqResMap) update(reqID uint64, resCh chan *Response) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.v[reqID] = resCh
+	r.m[reqID] = resCh
 }
 
 func (r *reqResMap) delete(reqID uint64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.v, reqID)
+	delete(r.m, reqID)
 }
 
 type Option func(ipc *BaseIPC)

@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"fmt"
-	"proxyServer/ipc/helper"
 )
 
 type StreamData struct {
@@ -49,13 +48,20 @@ func IsStream(data any) (StreamMsg, bool) {
 }
 
 func DataToBinary(data any, encoding DataEncoding) (r []byte) {
-	switch encoding {
-	case UTF8:
-		r = data.([]byte)
-	case BASE64:
-		r, _ = helper.SimpleEncoder(data.(string), "base64")
-	case BINARY:
-		r = data.([]byte)
+	switch v := data.(type) {
+	case string:
+		return []byte(v)
+	case []byte:
+		return v
 	}
+
+	//switch encoding {
+	//case UTF8:
+	//	r = data.([]byte)
+	//case BASE64:
+	//	r, _ = helper.SimpleEncoder(data.(string), "base64")
+	//case BINARY:
+	//	r = data.([]byte)
+	//}
 	return
 }
