@@ -125,6 +125,7 @@ type ClientAppModuleListReq struct {
 
 type ClientAppModuleDetailRes struct {
 	Id        int64       `json:"id"`          //db 主键id
+	AppId     string      `json:"app_id"`      //App模块id
 	NetId     string      `json:"net_id"`      //网络模块id
 	UserName  string      `json:"user_name"`   // 域名
 	AppName   string      `json:"app_name"`    // 域名
