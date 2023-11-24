@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gtime"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model"
@@ -181,18 +180,14 @@ func (s *sApp) CreateAppInfo(ctx context.Context, in model.AppModuleInfoCreateIn
 
 // DelAppById
 //
-//	@Description: 逻辑删除
+//	@Description: 物理删除
 //	@receiver s
 //	@param ctx
 //	@param in
 //	@return err
 func (s *sApp) DelAppById(ctx context.Context, in model.AppModuleDelInput) (err error) {
 	return dao.App.Transaction(ctx, func(ctx context.Context, tx gdb.TX) (err error) {
-		_, err = dao.App.Ctx(ctx).Data(do.App{
-			//DeletedAt: gtime.Now().Format("Y-m-d H:i:s"),
-			DeletedAt: new(gtime.Time),
-		}).Where(g.Map{"id = ": in.Id}).Delete()
-		//}).Where(g.Map{"id = ": in.Id}).Update()
+		_, err = dao.App.Ctx(ctx).Unscoped().Delete("id", in.Id)
 		if err != nil {
 			return err
 		}
