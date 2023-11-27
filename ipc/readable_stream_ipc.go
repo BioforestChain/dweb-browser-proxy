@@ -64,6 +64,11 @@ func (rsi *ReadableStreamIPC) BindInputStream(inputStream *ReadableStream) (err 
 }
 
 func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
+	defer func() {
+		// 输入流关闭后，输出流也要一起关闭
+		rsi.Close()
+	}()
+
 	for data := range readInputStream(rsi.inputStream) {
 		if len(data) == 4 || len(data) == 5 {
 			switch {
@@ -94,9 +99,6 @@ func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
 
 		rsi.msgSignal.Emit(msg, rsi)
 	}
-
-	// 输入流关闭后，输出流也要一起关闭
-	rsi.Close()
 
 	return nil
 }

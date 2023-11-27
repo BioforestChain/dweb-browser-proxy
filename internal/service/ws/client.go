@@ -67,6 +67,11 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		//_ = c.conn.Close()
 		c.Close()
+
+		if err := recover(); err != nil {
+			// TODO 日志上报
+			log.Println("readPump ws panic: ", err)
+		}
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -108,6 +113,11 @@ func (c *Client) writePump() {
 		//_ = c.conn.Close()
 		c.Close()
 		reader.Cancel()
+
+		if err := recover(); err != nil {
+			// TODO 日志上报
+			log.Println("writePump ws panic: ", err)
+		}
 	}()
 
 	go func() {
@@ -204,7 +214,14 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 
 	go func() {
-		defer client.Close()
+		defer func() {
+			client.Close()
+			if err := recover(); err != nil {
+				// TODO 日志上报
+				log.Println("clientIPC.BindInputStream panic: ", err)
+			}
+		}()
+
 		if err := clientIPC.BindInputStream(client.inputStream); err != nil {
 			log.Println("clientIPC.BindInputStream: ", err)
 		}
