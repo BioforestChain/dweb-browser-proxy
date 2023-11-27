@@ -41,7 +41,7 @@ func NewBodyReceiver(metaBody *MetaBody, ipc IPC) *BodyReceiver {
 			//if err != nil {
 			//	panic(fmt.Errorf("decode base64 err: %w", err))
 			//}
-			bRcv.bodyHub = NewBodyHub(metaBody.Data)
+			bRcv.bodyHub = NewBodyHub([]byte(metaBody.Data))
 		default:
 			panic(fmt.Sprintf("invalid metaBody type: %d", metaBody.Type))
 		}

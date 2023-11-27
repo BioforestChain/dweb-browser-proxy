@@ -2,15 +2,17 @@ package ipc
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"proxyServer/ipc/helper"
+	"strconv"
 )
 
 type MetaBody struct {
 	Type        MetaBodyType `json:"type"`
 	SenderUID   uint64       `json:"senderUid"`
 	ReceiverUID uint64       `json:"receiverUid"`
-	Data        []byte       `json:"data"` // 注：json.Marshal时会把slice编码成base64
+	Data        MetaBodyData `json:"data"` // 注：json.Marshal时会把slice编码成base64
 	StreamID    string       `json:"streamId"`
 	MetaID      string       `json:"metaId"`
 }
@@ -168,3 +170,27 @@ const (
 	// INLINE_BINARY 内联 BINARY 数据
 	INLINE_BINARY MetaBodyType = INLINE | MetaBodyType(BINARY)
 )
+
+type MetaBodyData []byte
+
+func (m *MetaBodyData) UnmarshalJSON(d []byte) error {
+	v, err := strconv.Unquote(string(d))
+	if err != nil {
+		return err
+	}
+
+	if result, ok := decodeBase64(v); ok {
+		*m = result
+	} else {
+		*m = []byte(v)
+	}
+
+	return nil
+}
+
+func decodeBase64(src string) ([]byte, bool) {
+	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
+	n, err := base64.StdEncoding.Decode(dst, []byte(src))
+
+	return dst[:n], err == nil
+}

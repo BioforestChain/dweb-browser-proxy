@@ -86,5 +86,32 @@ func TestMetaBody_MarshalJSON(t *testing.T) {
 			t.Fatal("metaBody marshal failed")
 		}
 	})
+}
 
+func TestMetaBody_MetaBodyData(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		type Foo struct {
+			Data MetaBodyData `json:"data"`
+		}
+
+		input := `{"data":"{\"success\":false,\"message\":\"Not Found\"}"}`
+
+		var f Foo
+		if err := json.Unmarshal([]byte(input), &f); err != nil {
+			t.Fatal("metaBody parse data filed failed")
+		}
+	})
+
+	t.Run("base64", func(t *testing.T) {
+		type Foo struct {
+			Data MetaBodyData `json:"data"`
+		}
+
+		input := `{"data": "aGk="}`
+
+		var f Foo
+		if err := json.Unmarshal([]byte(input), &f); err != nil || string(f.Data) != "hi" {
+			t.Fatal("metaBody parse data filed failed: ", err)
+		}
+	})
 }

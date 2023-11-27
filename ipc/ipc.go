@@ -90,6 +90,7 @@ func (bipc *BaseIPC) Send(ctx context.Context, req *Request) (*Response, error) 
 	bipc.RegisterReqID(req.ID, resCh)
 
 	defer func() {
+		// 返回结果后，把reqResMap里的记录删掉，防止内存泄漏
 		resChan, ok := bipc.reqResMap.getAndDelete(req.ID)
 		if ok {
 			chanResponsePool.Put(resChan)
