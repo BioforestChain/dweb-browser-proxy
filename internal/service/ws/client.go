@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
@@ -251,8 +250,6 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	//ClientIPCOnRequest(clientIPC)
 
-	//objIpc := ipc.NewBaseIPC()
-
 }
 
 type IpcBodyData struct {
@@ -388,7 +385,7 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 	_, err = NewCache(ctx).RedisCli.SAdd(ctx, getCacheKey(getTopicName), getXDWebPubSubDomain)
 
 	if err != nil {
-		g.Log().Debug(ctx, err)
+		log.Println("RedisCli SAdd panic: ", err)
 	}
 	//发起订阅
 
@@ -427,24 +424,24 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 				go func() {
 					defer func() {
 						if err := recover(); err != nil {
-							fmt.Println("============panic handlerSub============", err)
+							log.Println("go handlerSub panic: ", err)
 						}
 					}()
 					fmt.Printf("reqC:%#v\n", reqC)
 					response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
 					fmt.Printf("resPonse data is :%#v\n", response)
 					if err != nil {
-						g.Log().Debug(ctx, err)
+						log.Println("RedisCli Sub panic: ", err)
 					}
 				}()
 			}
 			if err != nil {
-				g.Log().Debug(ctx, err)
+				log.Println("RedisCli SMembers panic: ", err)
 			}
 			return nil
 		}, getTopicName)
 		if err != nil {
-			g.Log().Debug(ctxChild, err)
+			log.Println("RedisCli Sub panic: ", err)
 		}
 	}()
 
@@ -466,9 +463,6 @@ func handlerPub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 	getTopicName := ipcBodyData.Topic
 	getTopicData := ipcBodyData.Data
 
-	if err != nil {
-		g.Log().Debug(ctx, err)
-	}
 	//发起发布消息
 	go func() {
 		defer func() {
@@ -478,7 +472,7 @@ func handlerPub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 		}()
 		_, err = NewCache(ctx).RedisCli.Pub(ctx, getTopicName, getTopicData)
 		if err != nil {
-			g.Log().Debug(ctx, err)
+			log.Println("RedisCli Pub panic: ", err)
 		}
 	}()
 	return nil

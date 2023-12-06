@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"log"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model"
@@ -84,9 +86,11 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 		if err != nil {
 			return nil, err
 		}
+
 		if available {
 			return nil, gerror.Newf(`Sorry, your domain "%s" has been registered yet`, in.Domain)
 		}
+
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			result, err = dao.Net.Ctx(ctx).Data(do.Net{
 				Domain:           domain,
@@ -95,15 +99,21 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 				BroadcastAddress: in.BroadcastAddress,
 				NetId:            in.NetId,
 			}).Insert()
+			log.Printf("dao Net panic: ", err)
 			if err != nil {
-				return err
+				code := gerror.Code(err)
+				if code == gcode.CodeDbOperationError {
+					return gerror.Newf(`Sorry, your broadcastAddress "%s" has been registered yet`, in.BroadcastAddress)
+				} else {
+					return err
+				}
 			}
 			return nil
 		})
-		getPriKey, err = result.LastInsertId()
 		if err != nil {
 			return nil, err
 		}
+		getPriKey, err = result.LastInsertId()
 	}
 
 	findOne, err := dao.Net.Ctx(ctx).One(g.Map{
