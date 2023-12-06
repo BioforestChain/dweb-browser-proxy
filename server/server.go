@@ -12,11 +12,15 @@ import (
 	timeHelper "proxyServer/internal/helper/time"
 	"proxyServer/internal/packed"
 	"proxyServer/ipc"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 func main() {
 	//url := "ws://127.0.0.1:8000/ws?client_id=f544391c9215a6bfbb6f573b25c40d38"
-	url := "ws://127.0.0.1:8000/ws?client_id=127.0.0.1"
+	url := "ws://127.0.0.1:8000/proxy/ws?client_id=127.0.0.1"
+	//url := "ws://127.0.0.1:8000/proxy/ws"
 	conn, res, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		log.Println("Error connecting to server: ", err)
@@ -28,6 +32,11 @@ func main() {
 	ipcConn := newIPCConn(conn)
 
 	for {
+		//四个字节：uin32是长度,取多少长度的内容
+		//O  {"req_id":1,"method":"GET","url":"http://127.0.0.1:8000/ipc/test?client_id=127.0.0.2","headers":{"Accept":"*/*","Accept-Encoding":"gzip, deflate, br","Connection":"keep-alive","User-Agent":"Apifox/1.0.0 (https://apifox.com)"},"metaBody":{"type":5,"senderUid":7,"receiverUid":0,"data":"","streamId":"","metaId":"1xyf90kyQe8="},"type":0}
+		//O  {"req_id":3,"method":"GET","url":"http://127.0.0.1:8000/ipc/test?client_id=127.0.0.1","headers":{"Accept":"*/*","Accept-Encoding":"gzip, deflate, br","Connection":"keep-alive","User-Agent":"Apifox/1.0.0 (https://apifox.com)"},"metaBody":{"type":5,"senderUid":7,"receiverUid":0,"data":"","streamId":"","metaId":"eK+VxCgZxng="},"type":0}
+
+		//�  {"req_id":1,"method":"GET","url":"http://127.0.0.1:8000/ipc/test?client_id=f544391c9215a6bfbb6f573b25c40d38","headers":{"Accept":"*/*","Accept-Encoding":"gzip, deflate, br","Connection":"keep-alive","Content-Length":"173","Content-Type":"multipart/form-data; boundary=--------------------------987399823725143514993580","User-Agent":"Apifox/1.0.0 (https://apifox.com)"},"metaBody":{"type":5,"senderUid":4,"receiverUid":0,"data":"LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTk4NzM5OTgyMzcyNTE0MzUxNDk5MzU4MA0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJjbGllbnRfaWQiDQoNCjEyNy4wLjAuMQ0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLTk4NzM5OTgyMzcyNTE0MzUxNDk5MzU4MC0tDQo=","streamId":"","metaId":"bzkzZyhdh2M="},"type":0}
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading message: ", err)
@@ -261,7 +270,8 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 		log.Println("on request: ", request.ID)
 		url, _ := url.ParseRequestURI(request.URL)
 
-		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/publish_msg" || (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
+		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/publish_msg" ||
+			(url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
 
 			bodyReceiver := request.Body.(*ipc.BodyReceiver)
 			body1 := bodyReceiver.GetMetaBody().Data

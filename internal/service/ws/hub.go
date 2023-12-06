@@ -14,10 +14,10 @@ type Hub struct {
 	//broadcast chan []byte
 
 	// Register requests from the clients.
-	register chan *Client
+	Register chan *Client
 
 	// Unregister requests from the clients.
-	unregister  chan *Client
+	Unregister  chan *Client
 	EndSyncCond *sync.Cond
 	//Shutdown    int32
 	Shutdown chan struct{}
@@ -27,8 +27,8 @@ func NewHub() *Hub {
 	return &Hub{
 		clients: make(map[string]*Client),
 		//broadcast:  make(chan []byte),
-		register:    make(chan *Client),
-		unregister:  make(chan *Client),
+		Register:    make(chan *Client),
+		Unregister:  make(chan *Client),
 		EndSyncCond: sync.NewCond(&sync.Mutex{}),
 		Shutdown:    make(chan struct{}),
 	}
@@ -38,10 +38,10 @@ func (h *Hub) Run() {
 
 	for {
 		select {
-		case client := <-h.register:
+		case client := <-h.Register:
 			h.clients[client.ID] = client
 			log.Println("ws hub: ", h.clients)
-		case client := <-h.unregister:
+		case client := <-h.Unregister:
 			if _, ok := h.clients[client.ID]; ok {
 				//结束,发送信号
 				//h.EndSyncCond.L.Lock()
