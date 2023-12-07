@@ -37,16 +37,12 @@ func New() service.INet {
 //	@return entity
 //	@return err
 func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInput) (entity *v1.ClientNetModuleDetailRes, err error) {
-	//	Domain           string
-	//	Port             uint32
-	//	Secret           string
-	//	BroadcastAddress string
-	//	NetId            string
 	var (
 		getPriKey    int64
 		available    bool
 		result       sql.Result
 		nowTimestamp = time.Now().Unix()
+		findOne      gdb.Record
 	)
 	// secret checks.
 	secret, _ := g.Cfg().Get(ctx, "auth.secret")
@@ -59,7 +55,6 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	//if in.RootDomain != rootDomainName.String() {
 	//	return nil, gerror.Newf(`Sorry, your rootDomain "%s" is wrong yet`, in.RootDomain)
 	//}
-
 	if in.Id > 0 {
 		//更新
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
@@ -113,12 +108,12 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 		if err != nil {
 			return nil, err
 		}
-		getPriKey, err = result.LastInsertId()
+		getPriKey, _ = result.LastInsertId()
 	}
 
-	findOne, err := dao.Net.Ctx(ctx).One(g.Map{
-		"id =": getPriKey,
-	})
+	if findOne, err = dao.Net.Ctx(ctx).One(g.Map{"id =": getPriKey}); err != nil {
+		return nil, err
+	}
 	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}

@@ -55,8 +55,8 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 }
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
-	//if r.Response.Status >= http.StatusInternalServerError && r.Response.Status < consts.InitRedisErr {
-	if r.Response.Status >= http.StatusInternalServerError {
+	if r.Response.Status >= http.StatusInternalServerError && r.Response.Status < consts.InitRedisErr {
+		//if r.Response.Status >= http.StatusInternalServerError {
 		r.Response.WriteStatus(http.StatusInternalServerError)
 		r.Response.ClearBuffer()
 		r.Response.Write(middleware.Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
