@@ -77,15 +77,12 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	} else {
 		// 新增
 		// IsDomain checks.
-		available, err = s.IsDomainExist(ctx, domain)
-		if err != nil {
+		if available, err = s.IsDomainExist(ctx, domain); err != nil {
 			return nil, err
 		}
-
 		if available {
 			return nil, gerror.Newf(`Sorry, your domain "%s" has been registered yet`, in.Domain)
 		}
-
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			result, err = dao.Net.Ctx(ctx).Data(do.Net{
 				Domain:           domain,
