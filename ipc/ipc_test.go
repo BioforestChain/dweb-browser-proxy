@@ -36,7 +36,7 @@ func TestBaseIPC_Request(t *testing.T) {
 		ipc := NewBaseIPC()
 
 		go func() {
-			ipc.msgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
+			ipc.MsgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
 		}()
 
 		req := ipc.Request("http://www.example.com", RequestArgs{Method: "GET"})
@@ -86,9 +86,9 @@ func TestBaseIPC_ConcurrentRequest(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 	}
 
-	ipc.msgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
-	ipc.msgSignal.Emit(NewResponse(2, 200, NewHeader(), nil, ipc), nil)
-	ipc.msgSignal.Emit(NewResponse(3, 200, NewHeader(), nil, ipc), nil)
+	ipc.MsgSignal.Emit(NewResponse(1, 200, NewHeader(), nil, ipc), nil)
+	ipc.MsgSignal.Emit(NewResponse(2, 200, NewHeader(), nil, ipc), nil)
+	ipc.MsgSignal.Emit(NewResponse(3, 200, NewHeader(), nil, ipc), nil)
 
 	wg.Wait()
 

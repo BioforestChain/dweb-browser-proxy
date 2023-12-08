@@ -97,7 +97,7 @@ func (rsi *ReadableStreamIPC) bindInputStream() (err error) {
 
 		helper.PutBuffer(data)
 
-		rsi.msgSignal.Emit(msg, rsi)
+		rsi.MsgSignal.Emit(msg, rsi)
 	}
 
 	return nil

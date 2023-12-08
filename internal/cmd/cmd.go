@@ -56,6 +56,7 @@ func MiddlewareLimitHandler() func(r *ghttp.Request) {
 func MiddlewareErrorHandler(r *ghttp.Request) {
 	r.Middleware.Next()
 	if r.Response.Status >= http.StatusInternalServerError && r.Response.Status < consts.InitRedisErr {
+		//if r.Response.Status >= http.StatusInternalServerError {
 		r.Response.WriteStatus(http.StatusInternalServerError)
 		r.Response.ClearBuffer()
 		r.Response.Write(middleware.Response{http.StatusInternalServerError, "The server is busy, please try again later!", nil})
@@ -88,7 +89,7 @@ var (
 					req.Body = r.GetBody()
 					//TODO 暂定用 query 参数传递
 					req.ClientID = req.Host
-					resIpc, err := packed.Proxy2Ipc(ctx, hub, req)
+					resIpc, err := ws.Proxy2Ipc(ctx, hub, req)
 					if err != nil {
 						resIpc = packed.IpcErrResponse(consts.ServiceIsUnavailable, err.Error())
 					}
@@ -132,6 +133,15 @@ var (
 						chat.New(hub),
 					)
 				})
+
+				group.GET("/cOnReq", func(r *ghttp.Request) {
+					ws.ClientIPCOnRequest(ctx, hub, r.Response.Writer, r.Request)
+				})
+
+				group.GET("/cOnReqPub", func(r *ghttp.Request) {
+					ws.ClientIPCOnRequestPub(ctx, hub, r.Response.Writer, r.Request)
+				})
+
 				group.GET("/ws", func(r *ghttp.Request) {
 					//
 					ws.ServeWs(hub, r.Response.Writer, r.Request)

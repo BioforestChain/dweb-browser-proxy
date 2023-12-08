@@ -9,7 +9,6 @@ import (
 	v1 "proxyServer/api/chat/v1"
 	v1Client "proxyServer/api/client/v1"
 	redisHelper "proxyServer/internal/helper/redis"
-	"proxyServer/internal/packed"
 	ws "proxyServer/internal/service/ws"
 )
 
@@ -54,9 +53,9 @@ func (c *Controller) CreateTopicReq(ctx context.Context, req *v1.CreateTopicReq)
 	return
 }
 
-// SubscribeMsgReq
+// SubscribeMsgReq /proxy/pubsub/subscribe_msg
 //
-//	@Description: /proxy/pubsub/subscribe_msg
+//	@Description:
 //	@receiver c
 //	@param ctx
 //	@param req
@@ -88,7 +87,7 @@ func (c *Controller) SubscribeMsgReq(ctx context.Context, req *v1.SubscribeMsgRe
 			reqC.Body = gRequestData.GetBody()
 			reqC.ClientID = gRequestData.Get("client_id").String()
 			reqC.Body = data.Payload
-			_, err = packed.Proxy2Ipc(ctxChild, c.hub, reqC)
+			_, err = ws.Proxy2Ipc(ctxChild, c.hub, reqC)
 			return err
 		}, req.TopicName)
 

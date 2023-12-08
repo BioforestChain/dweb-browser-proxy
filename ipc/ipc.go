@@ -29,7 +29,7 @@ type BaseIPC struct {
 	supportBinary   bool
 	SupportProtocol SupportProtocol
 
-	msgSignal     *Signal
+	MsgSignal     *Signal
 	requestSignal *Signal
 	streamSignal  *Signal
 	closeSignal   *Signal // 负责clear所有信号的observer
@@ -67,7 +67,7 @@ func NewBaseIPC(opts ...Option) *BaseIPC {
 	}
 
 	ipc.closeSignal = NewSignal(false)
-	ipc.msgSignal = ipc.createSignal(false)
+	ipc.MsgSignal = ipc.createSignal(false)
 
 	if ipc.reqTimeout == 0 {
 		ipc.reqTimeout = 120 * time.Second
@@ -122,7 +122,7 @@ func (bipc *BaseIPC) GetOutputStreamReader() ReadableStreamReader {
 }
 
 func (bipc *BaseIPC) OnMessage(observer Observer) {
-	bipc.msgSignal.Listen(observer)
+	bipc.MsgSignal.Listen(observer)
 }
 
 func (bipc *BaseIPC) OnRequest(observer Observer) {

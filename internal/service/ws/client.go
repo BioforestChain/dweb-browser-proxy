@@ -1,8 +1,16 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
+	v1Client "proxyServer/api/client/v1"
+	"proxyServer/internal/consts"
+	redisHelper "proxyServer/internal/helper/redis"
 	"proxyServer/ipc"
 	"sync"
 	"time"
@@ -26,6 +34,16 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 1024 * 8
 )
+
+type Cache struct {
+	Ctx      context.Context
+	RedisCli *redisHelper.RedisInstance
+}
+
+func NewCache(ctx context.Context) *Cache {
+	redisCli, _ := redisHelper.GetRedisInstance("default")
+	return &Cache{Ctx: ctx, RedisCli: redisCli}
+}
 
 var (
 	newline = []byte{'\n'}
@@ -64,7 +82,7 @@ type Client struct {
 // reads from the goroutine.
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.Unregister <- c
 		//_ = c.conn.Close()
 		c.Close()
 
@@ -207,7 +225,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		inputStream: ipc.NewReadableStream(),
 	}
 
-	client.hub.register <- client
+	client.hub.Register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in new goroutines.
 	go client.writePump()
@@ -226,4 +244,268 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 			log.Println("clientIPC.BindInputStream: ", err)
 		}
 	}()
+
+	//pub sub
+	//test data
+
+	//ClientIPCOnRequest(clientIPC)
+
+}
+
+type IpcBodyData struct {
+	Topic string `json:"topic"`
+	Data  string `json:"data"`
+}
+type IpcHeaderData struct {
+	XDWebPubSub       string `json:"X-Dweb-Pubsub"`
+	XDWebPubSubApp    string `json:"X-Dweb-Pubsub-App"`
+	XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
+	XDWebPubSubDomain string `json:"X-Dweb-Pubsub-Net-Domain"`
+}
+
+func getCacheKey(keyName string) string {
+	return fmt.Sprintf(consts.FormatKey, consts.RedisPrefix, keyName)
+}
+
+var clientIPC = ipc.NewReadableStreamIPC(ipc.CLIENT, ipc.SupportProtocol{
+	Raw:         true,
+	MessagePack: false,
+	ProtoBuf:    false,
+})
+
+func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
+	var ipcBodyData IpcBodyData
+
+	client := &Client{
+		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
+		hub: hub,
+		//conn: conn,
+		// //send:        make(chan []byte, 256),
+		ipc:         clientIPC,
+		inputStream: ipc.NewReadableStream(),
+	}
+	//TODO 模拟数据
+	// ~~~~~~
+	header := map[string]string{
+		"X-Dweb-Pubsub":            "mmid2",
+		"X-Dweb-Pubsub-App":        "app_mmid2",
+		"X-Dweb-Pubsub-Net":        "net_mmid2",
+		"X-Dweb-Pubsub-Net-Domain": "userName_domain3",
+	}
+
+	ipcBody := map[string]string{"topic": "topic_name_xx"}
+	str, err := json.Marshal(ipcBody)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	bodySubSender := ipc.NewBodySender(str, clientIPC)
+	// ~~~~~~
+	//TODO 模拟数据 发起IPC request
+	//对接 js模块
+	go func() {
+		clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/sub", "POST", header, bodySubSender, clientIPC), nil)
+	}()
+
+	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
+		request := data.(*ipc.Request)
+		if request.URL == "/sub" && request.Method == ipc.POST {
+			handlerSub(ctx, request, ipcBodyData, client)
+		}
+	})
+}
+
+func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
+
+	var ipcBodyData IpcBodyData
+
+	client := &Client{
+		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
+		hub: hub,
+		//conn: conn,
+		// //send:        make(chan []byte, 256),
+		ipc:         clientIPC,
+		inputStream: ipc.NewReadableStream(),
+	}
+	//TODO 模拟数据
+	// ~~~~~~
+	header := map[string]string{
+		"X-Dweb-Pubsub":            "mmid2",
+		"X-Dweb-Pubsub-App":        "app_mmid2",
+		"X-Dweb-Pubsub-Net":        "net_mmid2",
+		"X-Dweb-Pubsub-Net-Domain": "userName_domain3",
+	}
+	// ~~~~~~
+	ipcBodyPub := map[string]string{
+		"topic": "topic_name_xx",
+		"data":  "{\"success\":false,\"message\":\"Not Found\"}",
+	}
+	strPub, err := json.Marshal(ipcBodyPub)
+	if err != nil {
+		fmt.Println(err)
+	}
+	bodyPubSender := ipc.NewBodySender(strPub, clientIPC)
+
+	go func() {
+		clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/pub", "POST", header, bodyPubSender, clientIPC), nil)
+	}()
+
+	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
+		request := data.(*ipc.Request)
+		if request.URL == "/pub" && request.Method == ipc.POST {
+			handlerPub(ctx, request, ipcBodyData, client)
+		}
+	})
+}
+
+// handlerSub
+// 处理Sub逻辑：订阅请求,生成topic和net domain对应关系
+//
+//	@Description:
+//	@param ctx
+//	@param request
+//	@param ipcBodyData
+//	@param client
+//	@return err
+func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyData, client *Client) (err error) {
+	fmt.Printf("Header:%#v\n", request.Header)
+	body := request.Body.GetMetaBody().Data
+	json.Unmarshal(body, &ipcBodyData)
+	getXDWebPubSub := request.Header["X-Dweb-Pubsub"]
+	getXDWebPubSubDomain := request.Header["X-Dweb-Pubsub-Net-Domain"]
+	getXDWebPubSubApp := request.Header["X-Dweb-Pubsub-App"]
+	getXDWebPubSubNet := request.Header["X-Dweb-Pubsub-Net"]
+	getTopicName := ipcBodyData.Topic
+
+	fmt.Printf("getXDWebPubSub:%#v\n", getXDWebPubSub)
+	fmt.Printf("getXDWebPubSubNet:%#v\n", getXDWebPubSubNet)
+
+	//存储映射
+	//topic ----netDomain
+	_, err = NewCache(ctx).RedisCli.SAdd(ctx, getCacheKey(getTopicName), getXDWebPubSubDomain)
+
+	if err != nil {
+		log.Println("RedisCli SAdd panic: ", err)
+	}
+	//发起订阅
+
+	var ctxChild = context.Background()
+	go func() {
+		select {
+		case <-client.hub.Shutdown:
+			ctxChild.Done()
+		}
+	}()
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println("============panic Sub callback getPub's data ============", err)
+			}
+		}()
+		headerData := map[string][]string{
+			"X-Dweb-Pubsub":            {getXDWebPubSub},
+			"X-Dweb-Pubsub-App":        {getXDWebPubSubApp},
+			"X-Dweb-Pubsub-Net":        {getXDWebPubSubNet},
+			"X-Dweb-Pubsub-Net-Domain": {getXDWebPubSubDomain},
+		}
+		err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
+			reqC := new(v1Client.IpcReq)
+			//分发
+			userList, err := NewCache(ctx).RedisCli.SMembers(ctx, getCacheKey(getTopicName))
+			for _, usr := range userList {
+				reqC.Method = string(request.Method)
+				reqC.URL = request.URL
+				reqC.Body = body
+				reqC.ClientID = usr
+				reqC.Body = data.Payload
+				headerData["X-Dweb-Pubsub-Net-Domain"][0] = usr
+				reqC.Header = headerData
+				go func() {
+					defer func() {
+						if err := recover(); err != nil {
+							log.Println("go handlerSub panic: ", err)
+						}
+					}()
+					fmt.Printf("reqC:%#v\n", reqC)
+					response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
+					fmt.Printf("resPonse data is :%#v\n", response)
+					if err != nil {
+						log.Println("RedisCli Sub panic: ", err)
+					}
+				}()
+			}
+			if err != nil {
+				log.Println("RedisCli SMembers panic: ", err)
+			}
+			return nil
+		}, getTopicName)
+		if err != nil {
+			log.Println("RedisCli Sub panic: ", err)
+		}
+	}()
+
+	return nil
+}
+
+// handlerPub
+//
+//	@Description: 处理Pub逻辑
+//	@param ctx
+//	@param request
+//	@param ipcBodyData
+//	@param client
+//	@return err
+func handlerPub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyData, client *Client) (err error) {
+	fmt.Printf("Header:%#v\n", request.Header)
+	body := request.Body.GetMetaBody().Data
+	json.Unmarshal(body, &ipcBodyData)
+	getTopicName := ipcBodyData.Topic
+	getTopicData := ipcBodyData.Data
+
+	//发起发布消息
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println("============panic handlerPub============", err)
+			}
+		}()
+		_, err = NewCache(ctx).RedisCli.Pub(ctx, getTopicName, getTopicData)
+		if err != nil {
+			log.Println("RedisCli Pub panic: ", err)
+		}
+	}()
+	return nil
+}
+
+// Proxy2Ipc
+//
+//	@Description: The request goes to the IPC object for processing
+//	@param ctx
+//	@param hub
+//	@param req
+//	@return res
+//	@return err
+func Proxy2Ipc(ctx context.Context, hub *Hub, req *v1Client.IpcReq) (res *ipc.Response, err error) {
+	client := hub.GetClient(req.ClientID)
+	if client == nil {
+		return nil, errors.New("the service is unavailable~")
+	}
+	var (
+		clientIpc     = client.GetIpc()
+		overallHeader = make(map[string]string)
+	)
+	for k, v := range req.Header {
+		overallHeader[k] = v[0]
+	}
+	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
+		Method: req.Method,
+		Header: overallHeader,
+		Body:   req.Body,
+	})
+	resIpc, err := clientIpc.Send(ctx, reqIpc)
+	if err != nil {
+		return nil, err
+	}
+	return resIpc, nil
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"log"
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/dao"
 	"proxyServer/internal/model"
@@ -35,31 +37,21 @@ func New() service.INet {
 //	@return entity
 //	@return err
 func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInput) (entity *v1.ClientNetModuleDetailRes, err error) {
-	//	Domain           string
-	//	Port             uint32
-	//	Secret           string
-	//	BroadcastAddress string
-	//	NetId            string
 	var (
 		getPriKey    int64
 		available    bool
 		result       sql.Result
 		nowTimestamp = time.Now().Unix()
+		findOne      gdb.Record
 	)
 	// secret checks.
 	secret, _ := g.Cfg().Get(ctx, "auth.secret")
 	if in.Secret != secret.String() {
 		return nil, gerror.Newf(`Sorry, your secret "%s" is wrong yet`, in.Secret)
 	}
-	//rootDomainName, _ := g.Cfg().Get(ctx, "rootDomain.name")
-	//domain := in.Domain + "." + rootDomainName.String()
 	domain := in.Domain
-	//if in.RootDomain != rootDomainName.String() {
-	//	return nil, gerror.Newf(`Sorry, your rootDomain "%s" is wrong yet`, in.RootDomain)
-	//}
-
+	// update.
 	if in.Id > 0 {
-		//更新
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			result, err = dao.Net.Ctx(ctx).Data(do.Net{
 				Id:               in.Id,
@@ -78,10 +70,9 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 		})
 		getPriKey = in.Id
 	} else {
-		// 新增
+		// add.
 		// IsDomain checks.
-		available, err = s.IsDomainExist(ctx, domain)
-		if err != nil {
+		if available, err = s.IsDomainExist(ctx, domain); err != nil {
 			return nil, err
 		}
 		if available {
@@ -95,27 +86,33 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 				BroadcastAddress: in.BroadcastAddress,
 				NetId:            in.NetId,
 			}).Insert()
+			log.Printf("dao Net panic: ", err)
 			if err != nil {
-				return err
+				code := gerror.Code(err)
+				if code == gcode.CodeDbOperationError {
+					return gerror.Newf(`Sorry, your broadcastAddress "%s" has been registered yet`, in.BroadcastAddress)
+				} else {
+					return err
+				}
 			}
 			return nil
 		})
-		getPriKey, err = result.LastInsertId()
 		if err != nil {
 			return nil, err
 		}
+		getPriKey, _ = result.LastInsertId()
 	}
 
-	findOne, err := dao.Net.Ctx(ctx).One(g.Map{
-		"id =": getPriKey,
-	})
+	if findOne, err = dao.Net.Ctx(ctx).One(g.Map{"id =": getPriKey}); err != nil {
+		return nil, err
+	}
 	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	entity.Domain = in.Domain
 	parts := strings.Split(in.BroadcastAddress, ".")
 	tld := parts[len(parts)-2] + "." + parts[len(parts)-1]
-	// 获取一级域名
+	// 获取 top level domain
 	entity.RootDomain = tld
 	// 用一级域名替换域名得到子串
 	entity.PrefixBroadcastAddress = strings.Replace(in.BroadcastAddress, "."+tld, "", 1)
@@ -137,13 +134,10 @@ func (s *sNet) GetNetModuleDetailById(ctx context.Context, in model.NetModuleDet
 	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	//rootDomainName, _ := g.Cfg().Get(ctx, "rootDomain.name")
-	//entity.RootDomain = rootDomainName.String()
 	parts := strings.Split(entity.BroadcastAddress, ".")
-	// 获取一级域名
+	// 获取 top level domain
 	tld := parts[len(parts)-2] + "." + parts[len(parts)-1]
 	entity.RootDomain = tld
-	// 用一级域名替换域名得到子串
 	entity.PrefixBroadcastAddress = strings.Replace(entity.BroadcastAddress, "."+tld, "", 1)
 	return entity, err
 }
@@ -171,16 +165,10 @@ func (s *sNet) GetNetModuleList(ctx context.Context, in model.NetModuleListQuery
 	if err = all.Structs(&entities); err != nil && err != sql.ErrNoRows {
 		return nil, 0, err
 	}
-	//rootDomainName, _ := g.Cfg().Get(ctx, "rootDomain.name")
 	for key, entity := range entities {
-		//parts := strings.Split(entity.Domain, ".")
-		//entities[key].RootDomain = rootDomainName.String()
-		//entities[key].PrefixDomain = parts[0]
 		parts := strings.Split(entity.BroadcastAddress, ".")
-		// 获取一级域名
 		tld := parts[len(parts)-2] + "." + parts[len(parts)-1]
 		entities[key].RootDomain = tld
-		// 用一级域名替换域名得到子串
 		entities[key].PrefixBroadcastAddress = strings.Replace(entity.BroadcastAddress, "."+tld, "", 1)
 	}
 	return entities, total, err
