@@ -26,15 +26,14 @@ func GetLastPage(total int64, limit int) int {
 //	@return page
 //	@return limit
 //	@return offset
+
 func InitCondition(initPage, initLimit int) (page, limit, offset int) {
-	page = initPage
 	if initPage == 0 {
-		page = 1
+		initPage = 1
 	}
-	limit = initLimit
-	if limit == 0 {
-		limit = 10
+
+	if initLimit == 0 {
+		initLimit = 10
 	}
-	offset = (page - 1) * limit
-	return
+	return initPage, initLimit, (initPage - 1) * initLimit
 }
