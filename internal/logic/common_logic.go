@@ -2,6 +2,7 @@ package logic
 
 import (
 	"math"
+	"proxyServer/internal/consts"
 )
 
 // GetLastPage
@@ -29,11 +30,11 @@ func GetLastPage(total int64, limit int) int {
 
 func InitCondition(initPage, initLimit int) (page, limit, offset int) {
 	if initPage == 0 {
-		initPage = 1
+		initPage = consts.InitPage
 	}
 
 	if initLimit == 0 {
-		initLimit = 10
+		initLimit = consts.InitLimit
 	}
 	return initPage, initLimit, (initPage - 1) * initLimit
 }
