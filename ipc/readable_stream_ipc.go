@@ -185,7 +185,7 @@ type SupportProtocol struct {
 
 // readInputStream 会阻塞读取流数据，除非使用controller.Close()关闭流或发生错误
 // 读取时，按 | header | body | header1 | body1 | ... 顺序读取
-// header由4字节组成，其uint32值，是body的大小
+// header由4字节组成，其uint32值是body的大小
 func readInputStream(stream *ReadableStream) <-chan []byte {
 	var dataChan = make(chan []byte, 1)
 	go func() {

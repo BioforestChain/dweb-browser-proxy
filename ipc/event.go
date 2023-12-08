@@ -5,11 +5,11 @@ import "fmt"
 type Event struct {
 	Type     MessageType  `json:"type"`
 	Name     string       `json:"name"`
-	Data     any          `json:"data"`
+	Data     []byte       `json:"data"`
 	Encoding DataEncoding `json:"encoding"`
 }
 
-func NewEvent(name string, data any, encoding DataEncoding) *Event {
+func NewEvent(name string, data []byte, encoding DataEncoding) *Event {
 	return &Event{Type: EVENT, Name: name, Data: data, Encoding: encoding}
 }
 

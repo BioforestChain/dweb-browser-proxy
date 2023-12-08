@@ -2,6 +2,7 @@ package ipc
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 )
 
@@ -54,4 +55,26 @@ func Test_objectToIpcMessage(t *testing.T) {
 			t.Fatal("objectToIpcMessage to response failed")
 		}
 	})
+}
+
+func Test_dataToBytes(t *testing.T) {
+	type args struct {
+		data     any
+		encoding DataEncoding
+	}
+	tests := []struct {
+		name  string
+		args  args
+		wantR []byte
+	}{
+		{name: "utf8", args: args{"hi", UTF8}, wantR: []byte("hi")},
+		{name: "base64", args: args{"aGk=", BASE64}, wantR: []byte("hi")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotR := dataToBytes(tt.args.data, tt.args.encoding); !reflect.DeepEqual(gotR, tt.wantR) {
+				t.Errorf("dataToBytes() = %v, want %v", gotR, tt.wantR)
+			}
+		})
+	}
 }
