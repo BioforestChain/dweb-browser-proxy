@@ -13,7 +13,6 @@ import (
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/app"
-	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/chat"
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
@@ -123,7 +122,7 @@ var (
 					group.Bind(
 						//Exclude routes that are not JWT certified
 						ping.New(),
-						auth.New(),
+						//auth.New(),
 						pre_user.New(),
 					)
 					//group.Middleware(middleware.JWTAuth)

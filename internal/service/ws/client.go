@@ -74,6 +74,10 @@ type Client struct {
 	closed bool
 
 	mutex sync.Mutex
+
+	DisConn bool
+
+	Shutdown chan struct{}
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -223,6 +227,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		//send:        make(chan []byte, 256),
 		ipc:         clientIPC,
 		inputStream: ipc.NewReadableStream(),
+		Shutdown:    make(chan struct{}),
 	}
 
 	client.hub.Register <- client
@@ -392,7 +397,7 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 	var ctxChild = context.Background()
 	go func() {
 		select {
-		case <-client.hub.Shutdown:
+		case <-client.Shutdown:
 			ctxChild.Done()
 		}
 	}()

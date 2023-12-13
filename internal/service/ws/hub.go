@@ -20,7 +20,7 @@ type Hub struct {
 	Unregister  chan *Client
 	EndSyncCond *sync.Cond
 	//Shutdown    int32
-	Shutdown chan struct{}
+	//Shutdown chan struct{}
 }
 
 func NewHub() *Hub {
@@ -30,7 +30,7 @@ func NewHub() *Hub {
 		Register:    make(chan *Client),
 		Unregister:  make(chan *Client),
 		EndSyncCond: sync.NewCond(&sync.Mutex{}),
-		Shutdown:    make(chan struct{}),
+		//Shutdown:    make(chan struct{}),
 	}
 }
 
@@ -44,13 +44,24 @@ func (h *Hub) Run() {
 		case client := <-h.Unregister:
 			if _, ok := h.clients[client.ID]; ok {
 				//结束,发送信号
+				//plan a
 				//h.EndSyncCond.L.Lock()
-				////atomic.StoreInt32(&h.Shutdown, 1)
-				//h.Shutdown <- struct{}{}
-				//h.EndSyncCond.Signal()
+				////TODO 多个地方读取，广播 sync.Cond 避免使用chan
+				//// 1. 发送（广播）信号，让业务方监听到
+				//// 2. 业务方根据信号，进行停止
+				//fmt.Println("·········································")
+				//client.DisConn = true
 				//h.EndSyncCond.L.Unlock()
 				delete(h.clients, client.ID)
-				//close(client.send)
+				//h.EndSyncCond.Broadcast()
+				//fmt.Println("······················broadcast end~~~~~~")
+				//plan b
+				//close(h.Shutdown)
+				close(client.Shutdown)
+				//plan c
+				//packed.CancelSrcRelease()
+				//packed.InitCtx()
+
 			}
 			//case message := <-h.broadcast:
 			//	for _, client := range h.clients {

@@ -236,6 +236,7 @@ func (r *RedisInstance) Sub(ctx context.Context, consumeFunc func(data *redis.Me
 	for {
 		select {
 		case <-ctx.Done():
+			fmt.Println("---------------Sub ctx", ctx.Done())
 			if err := psc.Unsubscribe(ctx); err != nil {
 				return fmt.Errorf("redis pubsub unsubscribe err: %v", err)
 			}
