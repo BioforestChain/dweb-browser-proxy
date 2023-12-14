@@ -262,10 +262,17 @@ type IpcBodyData struct {
 	Data  string `json:"data"`
 }
 type IpcHeaderData struct {
-	XDWebPubSub       string `json:"X-Dweb-Pubsub"`
-	XDWebPubSubApp    string `json:"X-Dweb-Pubsub-App"`
-	XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
-	XDWebPubSubDomain string `json:"X-Dweb-Pubsub-Net-Domain"`
+	XDwebHost string `json:"X-Dweb-Host"` // X-Dweb-Pubsub
+	//XDWebPubSub       string `json:"X-Dweb-Pubsub"`
+	XDWebPubSubApp string `json:"X-Dweb-Pubsub-App"`
+	//XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
+	//XDWebPubSubDomain string `json:"X-Dweb-Pubsub-Net-Domain"`
+}
+
+// IpcEvent.data
+type IpcEventDataHeaderBody struct {
+	Header IpcHeaderData `json:"header"`
+	Body   IpcBodyData   `json:"body"`
 }
 
 func getCacheKey(keyName string) string {
@@ -279,7 +286,6 @@ var clientIPC = ipc.NewReadableStreamIPC(ipc.CLIENT, ipc.SupportProtocol{
 })
 
 func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
-	var ipcBodyData IpcBodyData
 
 	client := &Client{
 		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
@@ -292,6 +298,7 @@ func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r 
 	//TODO 模拟数据
 	// ~~~~~~
 	header := map[string]string{
+		"X-Dweb-Host":              "mmid2",
 		"X-Dweb-Pubsub":            "mmid2",
 		"X-Dweb-Pubsub-App":        "app_mmid2",
 		"X-Dweb-Pubsub-Net":        "net_mmid2",
@@ -299,31 +306,32 @@ func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r 
 	}
 
 	ipcBody := map[string]string{"topic": "topic_name_xx"}
-	str, err := json.Marshal(ipcBody)
+	bodyData, err := json.Marshal(ipcBody)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	bodySubSender := ipc.NewBodySender(str, clientIPC)
+	bodySubSender := ipc.NewBodySender(bodyData, clientIPC)
 	// ~~~~~~
 	//TODO 模拟数据 发起IPC request
 	//对接 js模块
-	go func() {
-		clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/sub", "POST", header, bodySubSender, clientIPC), nil)
-	}()
+	//go func() {
+	clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/sub", "POST", header, bodySubSender, clientIPC), nil)
+	//}()
 
 	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
+		client := hub.GetClient(client.ID)
+		if client == nil {
+			return
+		}
 		request := data.(*ipc.Request)
 		if request.URL == "/sub" && request.Method == ipc.POST {
-			handlerSub(ctx, request, ipcBodyData, client)
+			handlerSub(ctx, request, client)
 		}
 	})
 }
 
 func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
-
-	var ipcBodyData IpcBodyData
-
 	client := &Client{
 		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
 		hub: hub,
@@ -335,6 +343,7 @@ func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter,
 	//TODO 模拟数据
 	// ~~~~~~
 	header := map[string]string{
+		"X-Dweb-Host":              "mmid2",
 		"X-Dweb-Pubsub":            "mmid2",
 		"X-Dweb-Pubsub-App":        "app_mmid2",
 		"X-Dweb-Pubsub-Net":        "net_mmid2",
@@ -356,9 +365,13 @@ func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter,
 	}()
 
 	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
+		client := hub.GetClient(client.ID)
+		if client == nil {
+			return
+		}
 		request := data.(*ipc.Request)
 		if request.URL == "/pub" && request.Method == ipc.POST {
-			handlerPub(ctx, request, ipcBodyData, client)
+			handlerPub(ctx, request)
 		}
 	})
 }
@@ -372,16 +385,19 @@ func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter,
 //	@param ipcBodyData
 //	@param client
 //	@return err
-func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyData, client *Client) (err error) {
-	fmt.Printf("Header:%#v\n", request.Header)
+func handlerSub(ctx context.Context, request *ipc.Request, client *Client) (err error) {
+	var ipcBodyData IpcBodyData
+
 	body := request.Body.GetMetaBody().Data
 	json.Unmarshal(body, &ipcBodyData)
-	getXDWebPubSub := request.Header["X-Dweb-Pubsub"]
+	getXDWebHost := request.Header["X-Dweb-Host"]
+	getXDWebPubSub := request.Header["X-Dweb-Host"]
 	getXDWebPubSubDomain := request.Header["X-Dweb-Pubsub-Net-Domain"]
 	getXDWebPubSubApp := request.Header["X-Dweb-Pubsub-App"]
 	getXDWebPubSubNet := request.Header["X-Dweb-Pubsub-Net"]
 	getTopicName := ipcBodyData.Topic
 
+	fmt.Printf("getXDWebHost:%#v\n", getXDWebHost)
 	fmt.Printf("getXDWebPubSub:%#v\n", getXDWebPubSub)
 	fmt.Printf("getXDWebPubSubNet:%#v\n", getXDWebPubSubNet)
 
@@ -394,11 +410,12 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 	}
 	//发起订阅
 
-	var ctxChild = context.Background()
+	ctxChild, cancel := context.WithCancel(context.Background())
 	go func() {
 		select {
 		case <-client.Shutdown:
-			ctxChild.Done()
+			fmt.Println("channel closed")
+			cancel()
 		}
 	}()
 
@@ -409,6 +426,7 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 			}
 		}()
 		headerData := map[string][]string{
+			"X-Dweb-Host":              {getXDWebHost},
 			"X-Dweb-Pubsub":            {getXDWebPubSub},
 			"X-Dweb-Pubsub-App":        {getXDWebPubSubApp},
 			"X-Dweb-Pubsub-Net":        {getXDWebPubSubNet},
@@ -432,11 +450,32 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 							log.Println("go handlerSub panic: ", err)
 						}
 					}()
-					fmt.Printf("reqC:%#v\n", reqC)
-					response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
-					fmt.Printf("resPonse data is :%#v\n", response)
+					//IpcEvent.data = {
+					//headers: {
+					//	"X-Dweb-Host": "xxx.dweb"， // 必填，网络模块转发的下个模块mmid；发布订阅模式下，就是发布订阅模块mmid
+					//	"X-Dweb-Pubsub-App": "xxx.dweb", // 选填，发布订阅模式下，是使用发布订阅模块的mmid
+					//},
+					//body: {
+					//topic: "xxx" // 必填，订阅的主题
+					//	data：string || []byte ， // 必填，发布的数据   //data.Payload
+					//}
+					//}
+					ipcCombHeaderBody := new(IpcEventDataHeaderBody)
+					ipcCombHeaderBody.Header = IpcHeaderData{
+						getXDWebHost, getXDWebPubSubApp,
+					}
+					ipcCombHeaderBody.Body = IpcBodyData{
+						getTopicName, data.Payload,
+					}
+					bodyData, err := json.Marshal(ipcCombHeaderBody)
 					if err != nil {
-						log.Println("RedisCli Sub panic: ", err)
+						log.Println("json ipcEventDataHeaderBody err is: ", err)
+					}
+					eventData := ipc.NewEvent(getTopicName, bodyData, ipc.UTF8)
+					fmt.Printf("eventData data is :%#v\n", eventData)
+					client.ipc.PostMessage(ctx, eventData)
+					if err != nil {
+						log.Println("ipc PostMessage err is: ", err)
 					}
 				}()
 			}
@@ -461,7 +500,8 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 //	@param ipcBodyData
 //	@param client
 //	@return err
-func handlerPub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyData, client *Client) (err error) {
+func handlerPub(ctx context.Context, request *ipc.Request) (err error) {
+	var ipcBodyData IpcBodyData
 	fmt.Printf("Header:%#v\n", request.Header)
 	body := request.Body.GetMetaBody().Data
 	json.Unmarshal(body, &ipcBodyData)
