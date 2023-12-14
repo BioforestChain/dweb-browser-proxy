@@ -15,7 +15,7 @@ func Test_objectToIpcMessage(t *testing.T) {
 	var ipc = NewReadableStreamIPC(CLIENT, SupportProtocol{})
 
 	t.Run("object to request", func(t *testing.T) {
-		metaBody := NewMetaBody(senderUID, data, WithMetaBodyType(INLINE_BINARY))
+		metaBody := NewMetaBody(INLINE_BINARY, senderUID, data)
 		reqMsg := NewReqMessage(reqID, method, url, map[string]string{}, metaBody)
 		reqData, _ := json.Marshal(reqMsg)
 
@@ -30,13 +30,13 @@ func Test_objectToIpcMessage(t *testing.T) {
 		}
 
 		bodyReceiver := req.Body.(*BodyReceiver)
-		if bodyReceiver.metaBody.Type != INLINE_BASE64 {
+		if bodyReceiver.metaBody.Type != INLINE_BINARY {
 			t.Fatal("objectToIpcMessage to request failed")
 		}
 	})
 
 	t.Run("object to response", func(t *testing.T) {
-		metaBody := NewMetaBody(senderUID, data, WithMetaBodyType(INLINE_TEXT))
+		metaBody := NewMetaBody(INLINE_TEXT, senderUID, data)
 		resMsg := NewResMessage(reqID, 200, map[string]string{}, metaBody)
 		resData, _ := json.Marshal(resMsg)
 
@@ -51,7 +51,7 @@ func Test_objectToIpcMessage(t *testing.T) {
 		}
 
 		bodyReceiver := res.Body.(*BodyReceiver)
-		if bodyReceiver.metaBody.Type != INLINE_TEXT {
+		if bodyReceiver.metaBody.Type != INLINE_BINARY {
 			t.Fatal("objectToIpcMessage to response failed")
 		}
 	})

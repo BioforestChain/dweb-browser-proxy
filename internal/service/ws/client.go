@@ -8,8 +8,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
+	"net/url"
 	v1Client "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
+	helperIPC "proxyServer/internal/helper/ipc"
 	redisHelper "proxyServer/internal/helper/redis"
 	"proxyServer/ipc"
 	"sync"
@@ -245,11 +247,24 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	//pub sub
-	//test data
+	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
+		request := data.(*ipc.Request)
 
-	//ClientIPCOnRequest(clientIPC)
+		if len(request.Header.Get("X-Dweb-Pubsub")) > 0 {
+			if err := handlerPubSub(request, client); err != nil {
+				// TODO
+				log.Println("handlerPubSub err: ", err)
+				body := []byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, err.Error()))
+				err = clientIPC.PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
+				fmt.Println("PostMessage err: ", err)
+				return
+			}
 
+			body := []byte(fmt.Sprint(`{"success": true, "message": "ok"}`))
+			err = clientIPC.PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
+			fmt.Println("PostMessage err: ", err)
+		}
+	})
 }
 
 type IpcBodyData struct {
@@ -274,7 +289,6 @@ var clientIPC = ipc.NewReadableStreamIPC(ipc.CLIENT, ipc.SupportProtocol{
 })
 
 func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
-	var ipcBodyData IpcBodyData
 
 	client := &Client{
 		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
@@ -310,7 +324,7 @@ func ClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r 
 	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
 		request := data.(*ipc.Request)
 		if request.URL == "/sub" && request.Method == ipc.POST {
-			handlerSub(ctx, request, ipcBodyData, client)
+			handlerSub(ctx, request, client)
 		}
 	})
 }
@@ -358,6 +372,28 @@ func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter,
 	})
 }
 
+func handlerPubSub(request *ipc.Request, client *Client) error {
+	parsedURL, err := url.Parse(request.URL)
+	if err != nil {
+		return err
+	}
+
+	subPath := fmt.Sprintf("/%s/sub", request.Header.Get("X-Dweb-Pubsub-App"))
+	if parsedURL.Path == subPath && request.Method == ipc.POST {
+		if err := handlerSub(context.Background(), request, client); err != nil {
+			// TODO
+			return err
+		}
+	}
+
+	pubPath := fmt.Sprintf("/%s/pub", request.Header.Get("X-Dweb-Pubsub-App"))
+	if request.URL == pubPath && request.Method == ipc.POST {
+
+	}
+
+	return nil
+}
+
 // handlerSub
 // 处理Sub逻辑：订阅请求,生成topic和net domain对应关系
 //
@@ -367,10 +403,23 @@ func ClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter,
 //	@param ipcBodyData
 //	@param client
 //	@return err
-func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyData, client *Client) (err error) {
+func handlerSub(ctx context.Context, request *ipc.Request, client *Client) (err error) {
 	fmt.Printf("Header:%#v\n", request.Header)
-	body := request.Body.GetMetaBody().Data
-	json.Unmarshal(body, &ipcBodyData)
+	var ipcBodyData IpcBodyData
+
+	body := make([]byte, 0)
+	bodyStream := request.Body.Stream()
+	if bodyStream != nil {
+		if body, err = helperIPC.ReadStreamWithTimeout(bodyStream, 5*time.Second); err != nil {
+			return err
+		}
+	}
+
+	if err = json.Unmarshal(body, &ipcBodyData); err != nil {
+		// TODO 日志上报
+		return err
+	}
+
 	getXDWebPubSub := request.Header["X-Dweb-Pubsub"]
 	getXDWebPubSubDomain := request.Header["X-Dweb-Pubsub-Net-Domain"]
 	getXDWebPubSubApp := request.Header["X-Dweb-Pubsub-App"]
@@ -385,10 +434,10 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 	_, err = NewCache(ctx).RedisCli.SAdd(ctx, getCacheKey(getTopicName), getXDWebPubSubDomain)
 
 	if err != nil {
-		log.Println("RedisCli SAdd panic: ", err)
+		return err
 	}
-	//发起订阅
 
+	//发起订阅
 	var ctxChild = context.Background()
 	go func() {
 		select {
@@ -397,55 +446,95 @@ func handlerSub(ctx context.Context, request *ipc.Request, ipcBodyData IpcBodyDa
 		}
 	}()
 
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				fmt.Println("============panic Sub callback getPub's data ============", err)
-			}
-		}()
-		headerData := map[string][]string{
-			"X-Dweb-Pubsub":            {getXDWebPubSub},
-			"X-Dweb-Pubsub-App":        {getXDWebPubSubApp},
-			"X-Dweb-Pubsub-Net":        {getXDWebPubSubNet},
-			"X-Dweb-Pubsub-Net-Domain": {getXDWebPubSubDomain},
-		}
-		err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
-			reqC := new(v1Client.IpcReq)
-			//分发
-			userList, err := NewCache(ctx).RedisCli.SMembers(ctx, getCacheKey(getTopicName))
-			for _, usr := range userList {
-				reqC.Method = string(request.Method)
-				reqC.URL = request.URL
-				reqC.Body = body
-				reqC.ClientID = usr
-				reqC.Body = data.Payload
-				headerData["X-Dweb-Pubsub-Net-Domain"][0] = usr
-				reqC.Header = headerData
-				go func() {
-					defer func() {
-						if err := recover(); err != nil {
-							log.Println("go handlerSub panic: ", err)
-						}
-					}()
-					fmt.Printf("reqC:%#v\n", reqC)
-					response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
-					fmt.Printf("resPonse data is :%#v\n", response)
-					if err != nil {
-						log.Println("RedisCli Sub panic: ", err)
+	headerData := map[string][]string{
+		"X-Dweb-Pubsub":            {getXDWebPubSub},
+		"X-Dweb-Pubsub-App":        {getXDWebPubSubApp},
+		"X-Dweb-Pubsub-Net":        {getXDWebPubSubNet},
+		"X-Dweb-Pubsub-Net-Domain": {getXDWebPubSubDomain},
+	}
+
+	err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
+		reqC := new(v1Client.IpcReq)
+		//分发
+		userList, err := NewCache(ctx).RedisCli.SMembers(ctx, getCacheKey(getTopicName))
+		for _, usr := range userList {
+			reqC.Method = string(request.Method)
+			reqC.URL = request.URL
+			reqC.Body = body
+			reqC.ClientID = usr
+			reqC.Body = data.Payload
+			headerData["X-Dweb-Pubsub-Net-Domain"][0] = usr
+			reqC.Header = headerData
+			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						log.Println("go handlerSub panic: ", err)
 					}
 				}()
-			}
-			if err != nil {
-				log.Println("RedisCli SMembers panic: ", err)
-			}
-			return nil
-		}, getTopicName)
-		if err != nil {
-			log.Println("RedisCli Sub panic: ", err)
+				fmt.Printf("reqC:%#v\n", reqC)
+				response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
+				fmt.Printf("resPonse data is :%#v\n", response)
+				if err != nil {
+					log.Println("RedisCli Sub panic: ", err)
+				}
+			}()
 		}
-	}()
+		if err != nil {
+			log.Println("RedisCli SMembers panic: ", err)
+			return err
+		}
+		return nil
+	}, getTopicName)
 
-	return nil
+	//go func() {
+	//	defer func() {
+	//		if err := recover(); err != nil {
+	//			fmt.Println("============panic Sub callback getPub's data ============", err)
+	//		}
+	//	}()
+	//	headerData := map[string][]string{
+	//		"X-Dweb-Pubsub":            {getXDWebPubSub},
+	//		"X-Dweb-Pubsub-App":        {getXDWebPubSubApp},
+	//		"X-Dweb-Pubsub-Net":        {getXDWebPubSubNet},
+	//		"X-Dweb-Pubsub-Net-Domain": {getXDWebPubSubDomain},
+	//	}
+	//	err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
+	//		reqC := new(v1Client.IpcReq)
+	//		//分发
+	//		userList, err := NewCache(ctx).RedisCli.SMembers(ctx, getCacheKey(getTopicName))
+	//		for _, usr := range userList {
+	//			reqC.Method = string(request.Method)
+	//			reqC.URL = request.URL
+	//			reqC.Body = body
+	//			reqC.ClientID = usr
+	//			reqC.Body = data.Payload
+	//			headerData["X-Dweb-Pubsub-Net-Domain"][0] = usr
+	//			reqC.Header = headerData
+	//			go func() {
+	//				defer func() {
+	//					if err := recover(); err != nil {
+	//						log.Println("go handlerSub panic: ", err)
+	//					}
+	//				}()
+	//				fmt.Printf("reqC:%#v\n", reqC)
+	//				response, err := Proxy2Ipc(ctxChild, client.hub, reqC)
+	//				fmt.Printf("resPonse data is :%#v\n", response)
+	//				if err != nil {
+	//					log.Println("RedisCli Sub panic: ", err)
+	//				}
+	//			}()
+	//		}
+	//		if err != nil {
+	//			log.Println("RedisCli SMembers panic: ", err)
+	//		}
+	//		return nil
+	//	}, getTopicName)
+	//	if err != nil {
+	//		log.Println("RedisCli Sub panic: ", err)
+	//	}
+	//}()
+
+	return err
 }
 
 // handlerPub

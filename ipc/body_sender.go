@@ -166,9 +166,9 @@ func (bs *BodySender) streamAsMeta(stream *ReadableStream) *MetaBody {
 		WithStreamControllerAbortFunc(abortFunc))
 
 	mb := NewMetaBody(
+		STREAM_ID,
 		bs.ipc.GetUID(),
 		streamFirstData,
-		WithMetaBodyType(STREAM_ID),
 		WithStreamID(streamID),
 	)
 

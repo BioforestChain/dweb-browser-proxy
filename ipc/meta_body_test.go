@@ -53,7 +53,7 @@ func TestMetaBody_typeEncoding(t *testing.T) {
 
 func assertTypeEncoding(t *testing.T, v MetaBodyType, wanted DataEncoding) {
 	t.Helper()
-	mb := NewMetaBody(1, []byte("abc"), WithMetaBodyType(v))
+	mb := NewMetaBody(v, 1, []byte("abc"))
 	got := mb.typeEncoding()
 	if got != wanted {
 		t.Fatal("MetaBody typeEncoding failed")
@@ -61,21 +61,21 @@ func assertTypeEncoding(t *testing.T, v MetaBodyType, wanted DataEncoding) {
 }
 
 func TestMetaBody_MarshalJSON(t *testing.T) {
-	t.Run("", func(t *testing.T) {
-		m := NewMetaBody(1, []byte("hi"), WithMetaBodyType(INLINE_TEXT))
+	t.Run("inline text", func(t *testing.T) {
+		m := NewMetaBody(INLINE_TEXT, 1, []byte("hi"))
 		mb, err := json.Marshal(m)
 		if err != nil {
 			t.Fatal("metaBody marshal failed")
 			return
 		}
 
-		if !bytes.Contains(mb, []byte(`"type":3`)) {
+		if !bytes.Contains(mb, []byte("aGk=")) {
 			t.Fatal("metaBody marshal failed")
 		}
 	})
 
-	t.Run("", func(t *testing.T) {
-		m := NewMetaBody(1, []byte("hi"), WithMetaBodyType(INLINE_BINARY))
+	t.Run("inline binary", func(t *testing.T) {
+		m := NewMetaBody(INLINE_BINARY, 1, []byte("hi"))
 		mb, err := json.Marshal(m)
 		if err != nil {
 			t.Fatal("metaBody marshal failed")

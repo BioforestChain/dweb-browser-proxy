@@ -100,7 +100,7 @@ func (b *Body) readReadableStream(p []byte) (n int, err error) {
 		p = append(p, r.Value...)
 	}
 
-	return 0, nil
+	return len(p), nil
 }
 
 func (b *Body) read(p []byte, src []byte) (int, error) {

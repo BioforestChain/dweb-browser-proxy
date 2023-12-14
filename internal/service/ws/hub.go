@@ -35,7 +35,6 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) Run() {
-
 	for {
 		select {
 		case client := <-h.Register:

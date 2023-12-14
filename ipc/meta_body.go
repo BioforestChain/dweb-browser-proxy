@@ -12,13 +12,13 @@ type MetaBody struct {
 	Type        MetaBodyType `json:"type"`
 	SenderUID   uint64       `json:"senderUid"`
 	ReceiverUID uint64       `json:"receiverUid"`
-	Data        MetaBodyData `json:"data"` // 注：json.Marshal时会把slice编码成base64
+	Data        []byte       `json:"data"` // 注：json.Marshal时会把slice编码成base64
 	StreamID    string       `json:"streamId"`
 	MetaID      string       `json:"metaId"`
 }
 
-func NewMetaBody(senderUID uint64, data []byte, options ...MetaBodyOption) *MetaBody {
-	mb := &MetaBody{SenderUID: senderUID, Data: data}
+func NewMetaBody(mType MetaBodyType, senderUID uint64, data []byte, options ...MetaBodyOption) *MetaBody {
+	mb := &MetaBody{Type: mType, SenderUID: senderUID, Data: data}
 
 	for _, opt := range options {
 		opt(mb)
@@ -29,7 +29,6 @@ func NewMetaBody(senderUID uint64, data []byte, options ...MetaBodyOption) *Meta
 		_, _ = rand.Read(randomBytes)
 		mb.MetaID = helper.SimpleDecoder(randomBytes, "base64")
 	}
-
 	return mb
 }
 
@@ -55,27 +54,68 @@ func (m *MetaBody) typeIsStream() bool {
 	return m.Type&INLINE == 0
 }
 
+// MarshalJSON
+// outbound或序列化时: metaBody的data为base64编码值，且metaBody的type为INLINE_BASE64 || STREAM_WITH_BASE64
 func (m *MetaBody) MarshalJSON() ([]byte, error) {
-	if m.typeEncoding() == BINARY {
-		// Create an alias to avoid infinite recursion
-		type MetaBodyAlias MetaBody
+	// metaBodyAlias Create an alias to avoid infinite recursion
+	type metaBodyAlias MetaBody
 
-		metaBody := FromMetaBodyBase64(m.SenderUID, m.Data, WithStreamID(m.StreamID), WithReceiverUID(m.ReceiverUID))
-		return json.Marshal((*MetaBodyAlias)(metaBody))
+	metaBody := FromMetaBodyBase64(m.SenderUID, m.Data,
+		WithStreamID(m.StreamID),
+		WithMetaID(m.MetaID),
+		WithReceiverUID(m.ReceiverUID))
+
+	var mba = (*metaBodyAlias)(metaBody)
+	return json.Marshal(mba)
+}
+
+// UnmarshalJSON
+// inbound或反序列化时，
+// 1. metaBody的type为（INLINE_TEXT || STREAM_WITH_TEXT）时，metaBody的data值为string类型，赋值给MetaBody.Data时需转换为[]byte
+// 2. metaBody的type为（INLINE_BASE64 || STREAM_WITH_BASE64）时，metaBody的data值为string类型， 赋值给MetaBody.Data时先decode base64，再转换成[]byte
+// 3. metaBody的type为（INLINE_BINARY || STREAM_WITH_BINARY），metaBody的data值为[]byte类型，赋值给MetaBody.Data时无需转换
+// 4. MetaBody.Type类型设置为（INLINE_BINARY || STREAM_WITH_BINARY）
+func (m *MetaBody) UnmarshalJSON(d []byte) error {
+	// metaBodyAlias Create an alias to avoid infinite recursion
+	type metaBodyAlias MetaBody
+	var mba = &struct {
+		*metaBodyAlias
+		Data any `json:"data"`
+	}{
+		metaBodyAlias: (*metaBodyAlias)(m),
 	}
 
-	type MetaBodyAlias MetaBody
+	if err := json.Unmarshal(d, &mba); err != nil {
+		return err
+	}
 
-	return json.Marshal((*MetaBodyAlias)(m))
+	encoding := DataEncoding(mba.Type & 0b11111110)
+	switch encoding {
+	case UTF8:
+		m.Data = []byte(mba.Data.(string))
+	case BASE64:
+		var err error
+		m.Data, err = decodeBase64(mba.Data.(string))
+		if err != nil {
+			return err
+		}
+	case BINARY:
+		m.Data = mba.Data.([]byte)
+	default:
+		m.Data = []byte(mba.Data.(string))
+		//return errors.New("unknown data encoding")
+	}
+
+	if m.StreamID == "" {
+		m.Type = INLINE_BINARY
+	} else {
+		m.Type = STREAM_WITH_BINARY
+	}
+
+	return nil
 }
 
 type MetaBodyOption func(mb *MetaBody)
-
-func WithMetaBodyType(mbType MetaBodyType) MetaBodyOption {
-	return func(mb *MetaBody) {
-		mb.Type = mbType
-	}
-}
 
 func WithMetaID(metaID string) MetaBodyOption {
 	return func(mb *MetaBody) {
@@ -96,9 +136,7 @@ func WithReceiverUID(receiverUID uint64) MetaBodyOption {
 }
 
 func FromMetaBodyText(senderUID uint64, data []byte, options ...MetaBodyOption) *MetaBody {
-	mb := NewMetaBody(senderUID, data, options...)
-
-	mb.Type = STREAM_WITH_TEXT
+	mb := NewMetaBody(STREAM_WITH_TEXT, senderUID, data, options...)
 	if mb.StreamID == "" {
 		mb.Type = INLINE_TEXT
 	}
@@ -107,8 +145,7 @@ func FromMetaBodyText(senderUID uint64, data []byte, options ...MetaBodyOption) 
 }
 
 func FromMetaBodyBase64(senderUID uint64, data []byte, options ...MetaBodyOption) *MetaBody {
-	mb := NewMetaBody(senderUID, data, options...)
-	mb.Type = STREAM_WITH_BASE64
+	mb := NewMetaBody(STREAM_WITH_BASE64, senderUID, data, options...)
 	if mb.StreamID == "" {
 		mb.Type = INLINE_BASE64
 	}
@@ -122,8 +159,7 @@ func FromMetaBodyBinary(sender any, data []byte, options ...MetaBodyOption) *Met
 
 	switch v := sender.(type) {
 	case uint64:
-		mb = NewMetaBody(v, data, options...)
-		mb.Type = STREAM_WITH_BINARY
+		mb = NewMetaBody(STREAM_WITH_BINARY, v, data, options...)
 		if mb.StreamID == "" {
 			mb.Type = INLINE_BINARY
 		}
@@ -131,9 +167,7 @@ func FromMetaBodyBinary(sender any, data []byte, options ...MetaBodyOption) *Met
 		if v.GetSupportBinary() {
 			mb = FromMetaBodyBinary(v.GetUID(), data, options...)
 		} else {
-			// []byte在json.Marshal时，会把[]byte编码成base64，所以这里不需要提前
-			// 使用helper.SimpleDecoder(data, "base64")进行base64编码
-			// 在数据出口postMessage时，会进行json.Marshal
+			// []byte在json.Marshal时，会把[]byte编码成base64
 			mb = FromMetaBodyBase64(v.GetUID(), data, options...)
 		}
 	default:
@@ -152,22 +186,22 @@ const (
 	// INLINE 内联数据
 	INLINE MetaBodyType = 1
 
-	// STREAM_WITH_TEXT 流，但是携带一帧的 UTF8 数据
+	// STREAM_WITH_TEXT 流 (2)，但是携带一帧的 UTF8 数据
 	STREAM_WITH_TEXT MetaBodyType = STREAM_ID | MetaBodyType(UTF8)
 
-	// STREAM_WITH_BASE64 流，但是携带一帧的 BASE64 数据
+	// STREAM_WITH_BASE64 流 (4)，但是携带一帧的 BASE64 数据
 	STREAM_WITH_BASE64 MetaBodyType = STREAM_ID | MetaBodyType(BASE64)
 
-	// STREAM_WITH_BINARY 流，但是携带一帧的 BINARY 数据
+	// STREAM_WITH_BINARY 流 (8)，但是携带一帧的 BINARY 数据
 	STREAM_WITH_BINARY MetaBodyType = STREAM_ID | MetaBodyType(BINARY)
 
-	// INLINE_TEXT 内联 UTF8 数据
+	// INLINE_TEXT 内联 UTF8 数据 (3)
 	INLINE_TEXT MetaBodyType = INLINE | MetaBodyType(UTF8)
 
-	// INLINE_BASE64 内联 BASE64 数据
+	// INLINE_BASE64 内联 BASE64 数据 (5)
 	INLINE_BASE64 MetaBodyType = INLINE | MetaBodyType(BASE64)
 
-	// INLINE_BINARY 内联 BINARY 数据
+	// INLINE_BINARY 内联 BINARY 数据 (9)
 	INLINE_BINARY MetaBodyType = INLINE | MetaBodyType(BINARY)
 )
 
@@ -179,7 +213,7 @@ func (m *MetaBodyData) UnmarshalJSON(d []byte) error {
 		return err
 	}
 
-	if result, ok := decodeBase64(v); ok {
+	if result, ok := decodeBase64Old(v); ok {
 		*m = result
 	} else {
 		*m = []byte(v)
@@ -188,9 +222,16 @@ func (m *MetaBodyData) UnmarshalJSON(d []byte) error {
 	return nil
 }
 
-func decodeBase64(src string) ([]byte, bool) {
+func decodeBase64Old(src string) ([]byte, bool) {
 	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 	n, err := base64.StdEncoding.Decode(dst, []byte(src))
 
 	return dst[:n], err == nil
+}
+
+func decodeBase64(src string) ([]byte, error) {
+	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
+	n, err := base64.StdEncoding.Decode(dst, []byte(src))
+
+	return dst[:n], err
 }

@@ -31,6 +31,10 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	return json.Marshal(newHeader)
 }
 
+func (h Header) Get(key string) string {
+	return h[key]
+}
+
 // headers.toJSON()
 // NewIpcHeader.toJSON
 func (h Header) toJSON() map[string]string {
