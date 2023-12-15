@@ -13,7 +13,6 @@ import (
 	v1 "proxyServer/api/client/v1"
 	"proxyServer/internal/consts"
 	"proxyServer/internal/controller/app"
-	"proxyServer/internal/controller/auth"
 	"proxyServer/internal/controller/chat"
 	"proxyServer/internal/controller/ping"
 	"proxyServer/internal/controller/pre_user"
@@ -123,7 +122,7 @@ var (
 					group.Bind(
 						//Exclude routes that are not JWT certified
 						ping.New(),
-						auth.New(),
+						//auth.New(),
 						pre_user.New(),
 					)
 					//group.Middleware(middleware.JWTAuth)
@@ -134,12 +133,20 @@ var (
 					)
 				})
 
+				group.POST("/pubsub/test/pub", func(r *ghttp.Request) {
+					ws.TestPubData(ctx, r.Response.Writer, r.Request)
+				})
+
+				group.POST("/pubsub/test/sub", func(r *ghttp.Request) {
+					ws.TestSubData(ctx, hub, r.Response.Writer, r.Request)
+				})
+
 				group.GET("/cOnReq", func(r *ghttp.Request) {
-					ws.ClientIPCOnRequest(ctx, hub, r.Response.Writer, r.Request)
+					ws.TestClientIPCOnRequest(ctx, hub, r.Response.Writer, r.Request)
 				})
 
 				group.GET("/cOnReqPub", func(r *ghttp.Request) {
-					ws.ClientIPCOnRequestPub(ctx, hub, r.Response.Writer, r.Request)
+					ws.TestClientIPCOnRequestPub(ctx, hub, r.Response.Writer, r.Request)
 				})
 
 				group.GET("/ws", func(r *ghttp.Request) {

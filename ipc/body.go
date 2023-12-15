@@ -84,6 +84,7 @@ func (b *Body) readU8a(p []byte) (int, error) {
 	return b.read(p, b.bodyHub.U8a)
 }
 
+// TODO 需要添加超时返回逻辑
 func (b *Body) readReadableStream(p []byte) (n int, err error) {
 	bodyStream := b.Stream()
 	if bodyStream == nil || len(p) == 0 {

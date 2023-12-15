@@ -56,6 +56,9 @@ func (c *Controller) CreateTopicReq(ctx context.Context, req *v1.CreateTopicReq)
 // SubscribeMsgReq /proxy/pubsub/subscribe_msg
 //
 //	@Description:
+//
+// 离线--client 信号--监听关闭协程--防止无效订阅协程常存
+//
 //	@receiver c
 //	@param ctx
 //	@param req
@@ -64,19 +67,26 @@ func (c *Controller) CreateTopicReq(ctx context.Context, req *v1.CreateTopicReq)
 func (c *Controller) SubscribeMsgReq(ctx context.Context, req *v1.SubscribeMsgReq) (res *v1.SubscribeMsgRes, err error) {
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("SubscribeMsgReq Validator", err)
+		return nil, err
+	}
+	gRequestData := g.RequestFromCtx(ctx)
+	ctxChild, cancel := context.WithCancel(context.Background())
+	clientId := gRequestData.Get("client_id").String()
+	client := c.hub.GetClient(clientId)
+	if client == nil {
+		return
 	}
 
-	//todo 离线--hub信号--监听关闭协程
-	gRequestData := g.RequestFromCtx(ctx)
-
-	var ctxChild = context.Background()
 	go func() {
 		select {
-		case <-c.hub.Shutdown:
-			ctxChild.Done()
+		case <-client.Shutdown:
+			fmt.Println("channel closed")
+			//ctxChild.Done()
+			cancel()
+		default:
 		}
 	}()
-
+	//第二个协程
 	go func() {
 		err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
 			reqC := new(v1Client.IpcReq)
@@ -85,18 +95,30 @@ func (c *Controller) SubscribeMsgReq(ctx context.Context, req *v1.SubscribeMsgRe
 			reqC.URL = gRequestData.GetUrl()
 			reqC.Host = gRequestData.GetHost()
 			reqC.Body = gRequestData.GetBody()
-			reqC.ClientID = gRequestData.Get("client_id").String()
+			reqC.ClientID = clientId
 			reqC.Body = data.Payload
 			_, err = ws.Proxy2Ipc(ctxChild, c.hub, reqC)
+			fmt.Println("ctxSrcRelease Proxy2Ipc", err)
 			return err
 		}, req.TopicName)
-
-		//conn, _, err := g.Redis().Subscribe(ctx, req.TopicName)
-
 		if err != nil {
-			g.Log().Debug(ctxChild, err)
-			//return nil, err
+			fmt.Println("ctxSrcRelease Validator", err)
+			//return
 		}
+		//第一个协程
+		//go func() {
+		//	client := c.hub.GetClient(clientId)
+		//	if client == nil {
+		//		return
+		//	}
+		//	c.hub.EndSyncCond.L.Lock()
+		//	for !client.DisConn {
+		//		c.hub.EndSyncCond.Wait()
+		//	}
+		//	cancel()
+		//	c.hub.EndSyncCond.L.Unlock()
+		//}()
+
 	}()
 	return res, nil
 }

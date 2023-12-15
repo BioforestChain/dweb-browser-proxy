@@ -197,9 +197,15 @@ func (r *RedisInstance) Ttl(ctx context.Context, key string) (int64, error) {
 func (r *RedisInstance) SAdd(ctx context.Context, key string, value string) (int64, error) {
 	return r.Client.SAdd(ctx, key, value).Result()
 }
+
 func (r *RedisInstance) SMembers(ctx context.Context, key string) ([]string, error) {
 	return r.Client.SMembers(ctx, key).Result()
 }
+
+func (r *RedisInstance) SIsMember(ctx context.Context, key string, member interface{}) (bool, error) {
+	return r.Client.SIsMember(ctx, key, member).Result()
+}
+
 func (r *RedisInstance) SRANDMEMBER(ctx context.Context, key string) (string, error) {
 
 	return r.Client.SRandMember(ctx, key).Result()
@@ -236,6 +242,7 @@ func (r *RedisInstance) Sub(ctx context.Context, consumeFunc func(data *redis.Me
 	for {
 		select {
 		case <-ctx.Done():
+			fmt.Println("---------------Sub ctx", ctx.Done())
 			if err := psc.Unsubscribe(ctx); err != nil {
 				return fmt.Errorf("redis pubsub unsubscribe err: %v", err)
 			}

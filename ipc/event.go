@@ -16,3 +16,7 @@ func NewEvent(name string, data []byte, encoding DataEncoding) *Event {
 func (s *Event) String() string {
 	return fmt.Sprintf("Event - Type: %d, Name: %s, Data: %p, Encoding: %d", s.Type, s.Name, s.Data, s.Encoding)
 }
+
+func NewEventBase64(name string, data []byte) *Event {
+	return NewEvent(name, data, BASE64)
+}

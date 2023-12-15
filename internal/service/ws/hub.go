@@ -2,7 +2,6 @@ package service
 
 import (
 	"log"
-	"sync"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the clients.
@@ -17,20 +16,15 @@ type Hub struct {
 	Register chan *Client
 
 	// Unregister requests from the clients.
-	Unregister  chan *Client
-	EndSyncCond *sync.Cond
-	//Shutdown    int32
-	Shutdown chan struct{}
+	Unregister chan *Client
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		clients: make(map[string]*Client),
 		//broadcast:  make(chan []byte),
-		Register:    make(chan *Client),
-		Unregister:  make(chan *Client),
-		EndSyncCond: sync.NewCond(&sync.Mutex{}),
-		Shutdown:    make(chan struct{}),
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
 	}
 }
 
@@ -43,13 +37,8 @@ func (h *Hub) Run() {
 		case client := <-h.Unregister:
 			if _, ok := h.clients[client.ID]; ok {
 				//结束,发送信号
-				//h.EndSyncCond.L.Lock()
-				////atomic.StoreInt32(&h.Shutdown, 1)
-				//h.Shutdown <- struct{}{}
-				//h.EndSyncCond.Signal()
-				//h.EndSyncCond.L.Unlock()
 				delete(h.clients, client.ID)
-				//close(client.send)
+				close(client.Shutdown)
 			}
 			//case message := <-h.broadcast:
 			//	for _, client := range h.clients {
@@ -70,4 +59,12 @@ func (h *Hub) GetClient(clientID string) *Client {
 		return nil
 	}
 	return client
+}
+
+func (h *Hub) Online(clientID string) bool {
+	_, ok := h.clients[clientID]
+	if ok {
+		return true
+	}
+	return false
 }
