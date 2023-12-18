@@ -10,7 +10,7 @@
 package model
 
 import (
-	"proxyServer/internal/dao"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 )
 
 type NetModuleCreateInput struct {

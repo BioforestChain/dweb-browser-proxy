@@ -3,11 +3,11 @@ package net
 import (
 	"context"
 	"fmt"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/page"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "proxyServer/api/client/v1"
-	commonLogic "proxyServer/internal/logic"
-	"proxyServer/internal/model"
-	"proxyServer/internal/service"
 )
 
 type Controller struct{}
@@ -81,7 +81,7 @@ func (c *Controller) NetModuleDetailById(ctx context.Context, req *v1.ClientNetM
 //	@return err
 func (c *Controller) NetModuleList(ctx context.Context, req *v1.ClientNetModuleListReq) (res *v1.ClientNetModuleListRes, err error) {
 	condition := model.NetModuleListQueryInput{}
-	condition.Page, condition.Limit, condition.Offset = commonLogic.InitCondition(req.Page, req.Limit)
+	condition.Page, condition.Limit, condition.Offset = page.InitCondition(req.Page, req.Limit)
 	condition.NetId = req.NetId
 	condition.Domain = req.Domain
 	condition.IsOnline = req.IsOnline
@@ -91,7 +91,7 @@ func (c *Controller) NetModuleList(ctx context.Context, req *v1.ClientNetModuleL
 	res.List = list
 	res.Total = total
 	res.Page = condition.Page
-	res.LastPage = commonLogic.GetLastPage(int64(total), condition.Limit)
+	res.LastPage = page.GetLastPage(int64(total), condition.Limit)
 	return res, err
 }
 
@@ -105,7 +105,7 @@ func (c *Controller) NetModuleList(ctx context.Context, req *v1.ClientNetModuleL
 //	@return err
 func (c *Controller) NetModuleDel(ctx context.Context, req *v1.ClientNetModuleListReq) (res *v1.ClientNetModuleListRes, err error) {
 	condition := model.NetModuleListQueryInput{}
-	condition.Page, condition.Limit, condition.Offset = commonLogic.InitCondition(req.Page, req.Limit)
+	condition.Page, condition.Limit, condition.Offset = page.InitCondition(req.Page, req.Limit)
 	condition.NetId = req.NetId
 	condition.Domain = req.Domain
 	condition.IsOnline = req.IsOnline
@@ -115,6 +115,6 @@ func (c *Controller) NetModuleDel(ctx context.Context, req *v1.ClientNetModuleLi
 	res.List = list
 	res.Total = total
 	res.Page = condition.Page
-	res.LastPage = commonLogic.GetLastPage(int64(total), condition.Limit)
+	res.LastPage = page.GetLastPage(int64(total), condition.Limit)
 	return res, err
 }

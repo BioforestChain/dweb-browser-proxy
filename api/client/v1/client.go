@@ -1,11 +1,11 @@
 package v1
 
 import (
+	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
 	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
-	"proxyServer/internal/dao"
-	"proxyServer/internal/model/do"
 )
 
 //// ClientRegReq

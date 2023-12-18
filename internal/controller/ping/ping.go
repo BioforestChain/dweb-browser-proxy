@@ -2,9 +2,9 @@ package ping
 
 import (
 	"context"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/ping/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/middleware"
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "proxyServer/api/ping/v1"
-	"proxyServer/internal/logic/middleware"
 )
 
 type Controller struct{}

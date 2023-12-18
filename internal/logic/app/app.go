@@ -3,13 +3,13 @@ package app
 import (
 	"context"
 	"database/sql"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "proxyServer/api/client/v1"
-	"proxyServer/internal/dao"
-	"proxyServer/internal/model"
-	"proxyServer/internal/model/do"
-	"proxyServer/internal/service"
 	"time"
 )
 

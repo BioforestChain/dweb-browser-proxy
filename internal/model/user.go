@@ -9,7 +9,7 @@
 */
 package model
 
-import "proxyServer/internal/dao"
+import "github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 
 // UserAppInfoCreateInput
 // @Description: Domain,AppInfo

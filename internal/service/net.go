@@ -7,9 +7,9 @@ package service
 
 import (
 	"context"
-	v1 "proxyServer/api/client/v1"
-	"proxyServer/internal/model"
-	//"proxyServer/internal/model/do"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
+	//"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
 )
 
 type (

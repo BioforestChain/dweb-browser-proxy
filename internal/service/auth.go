@@ -7,7 +7,7 @@ package service
 
 import (
 	"context"
-	v1 "proxyServer/api/client/v1"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
 )
 
 type (

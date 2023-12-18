@@ -5,8 +5,7 @@
 package logic
 
 import (
-	_ "proxyServer/internal/logic/app"
-	_ "proxyServer/internal/logic/auth"
-	_ "proxyServer/internal/logic/middleware"
-	_ "proxyServer/internal/logic/net"
+	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/app"
+	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/auth"
+	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/net"
 )

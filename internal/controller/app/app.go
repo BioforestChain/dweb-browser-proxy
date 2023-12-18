@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/page"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "proxyServer/api/client/v1"
-	commonLogic "proxyServer/internal/logic"
-	"proxyServer/internal/model"
-	"proxyServer/internal/service"
 )
 
 type Controller struct{}
@@ -86,7 +86,7 @@ func (c *Controller) ClientAppInfoReport(ctx context.Context, req *v1.ClientAppI
 //	@return err
 func (c *Controller) AppModuleList(ctx context.Context, req *v1.ClientAppModuleListReq) (res *v1.ClientAppModuleListRes, err error) {
 	condition := model.AppModuleListQueryInput{}
-	condition.Page, condition.Limit, condition.Offset = commonLogic.InitCondition(req.Page, req.Limit)
+	condition.Page, condition.Limit, condition.Offset = page.InitCondition(req.Page, req.Limit)
 	condition.UserName = req.UserName
 	condition.NetId = req.NetId
 	condition.AppId = req.AppId
@@ -99,6 +99,6 @@ func (c *Controller) AppModuleList(ctx context.Context, req *v1.ClientAppModuleL
 	res.List = list
 	res.Total = total
 	res.Page = condition.Page
-	res.LastPage = commonLogic.GetLastPage(int64(total), condition.Limit)
+	res.LastPage = page.GetLastPage(int64(total), condition.Limit)
 	return res, err
 }

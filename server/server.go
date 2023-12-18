@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	timeHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/time"
+	ipc2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	timeHelper "proxyServer/internal/helper/time"
-	"proxyServer/internal/packed"
-	"proxyServer/ipc"
 	"regexp"
 	"strconv"
 	"strings"
@@ -52,8 +51,8 @@ func main() {
 }
 
 type IPCConn struct {
-	ipc         ipc.IPC
-	inputStream *ipc.ReadableStream
+	ipc         ipc2.IPC
+	inputStream *ipc2.ReadableStream
 	conn        *websocket.Conn
 }
 
@@ -89,7 +88,7 @@ func saveFile(name, data string) {
 	filepath.Ext(name)
 
 	//img, _ := os.Create(filepath.Join("/tmp", name))
-	proPath := packed.ProjectPath()
+	proPath := ProjectPath()
 	fmt.Printf("proPath: %#v\n", proPath)
 	img, _ := os.Create(filepath.Join(proPath+"server/tmp", name))
 	img.Write([]byte(data))
@@ -97,15 +96,15 @@ func saveFile(name, data string) {
 }
 
 func newIPCConn(conn *websocket.Conn) *IPCConn {
-	serverIPC := ipc.NewReadableStreamIPC(ipc.SERVER, ipc.SupportProtocol{
+	serverIPC := ipc2.NewReadableStreamIPC(ipc2.SERVER, ipc2.SupportProtocol{
 		Raw:         true,
 		MessagePack: false,
 		ProtoBuf:    false,
 	})
 
 	// 监听并处理请求，echo请求数据
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
-		request := req.(*ipc.Request)
+	serverIPC.OnRequest(func(req interface{}, ic ipc2.IPC) {
+		request := req.(*ipc2.Request)
 		log.Println("on request: ", request.ID)
 
 		url, _ := url.ParseRequestURI(request.URL)
@@ -115,13 +114,13 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 			//log.Println("onRequest: ", request.URL, string(body), ic)
 
 			body := `{"code": 0, "message": "hi"}`
-			res := ipc.NewResponse(
+			res := ipc2.NewResponse(
 				request.ID,
 				200,
-				ipc.NewHeaderWithExtra(map[string]string{
+				ipc2.NewHeaderWithExtra(map[string]string{
 					"Content-Type": "application/json",
 				}),
-				ipc.NewBodySender([]byte(body), ic),
+				ipc2.NewBodySender([]byte(body), ic),
 				ic,
 			)
 
@@ -132,26 +131,26 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 	})
 
 	// 监听并处理请求，echo请求数据
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
-		request := req.(*ipc.Request)
+	serverIPC.OnRequest(func(req interface{}, ic ipc2.IPC) {
+		request := req.(*ipc2.Request)
 		log.Println("on request: ", request.ID)
 
 		url, _ := url.ParseRequestURI(request.URL)
 
 		if (url.Host + url.Path) == "127.0.0.1:8000/ipc/stream" {
-			var res *ipc.Response
+			var res *ipc2.Response
 			path, _ := getAbsPath("server/golang.png")
 			f, err := os.Open(path)
 			if err != nil {
-				res = ipc.FromResponseText(
+				res = ipc2.FromResponseText(
 					request.ID,
 					http.StatusInternalServerError,
-					ipc.NewHeader(),
+					ipc2.NewHeader(),
 					http.StatusText(http.StatusInternalServerError),
 					ic,
 				)
 			} else {
-				bodyStream := ipc.NewReadableStream()
+				bodyStream := ipc2.NewReadableStream()
 
 				var total int
 				info, _ := f.Stat()
@@ -174,10 +173,10 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 					log.Println(f.Close())
 				}()
 
-				res = ipc.FromResponseStream(
+				res = ipc2.FromResponseStream(
 					request.ID,
 					http.StatusOK,
-					ipc.NewHeaderWithExtra(map[string]string{
+					ipc2.NewHeaderWithExtra(map[string]string{
 						"Content-Type": "image/png",
 					}),
 					bodyStream,
@@ -191,11 +190,11 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 		}
 	})
 	// POST http test
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
-		request := req.(*ipc.Request)
+	serverIPC.OnRequest(func(req interface{}, ic ipc2.IPC) {
+		request := req.(*ipc2.Request)
 
 		log.Println("on request: ", request.ID)
-		bodyReceiver := request.Body.(*ipc.BodyReceiver)
+		bodyReceiver := request.Body.(*ipc2.BodyReceiver)
 		body := bodyReceiver.GetMetaBody().Data
 
 		//----------------------------716381082216618958260243
@@ -247,13 +246,13 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 
 			bodyOther := `{"code": 0, "message": "hi by post"}`
 
-			res := ipc.NewResponse(
+			res := ipc2.NewResponse(
 				request.ID,
 				200,
-				ipc.NewHeaderWithExtra(map[string]string{
+				ipc2.NewHeaderWithExtra(map[string]string{
 					"Content-Type": "application/json",
 				}),
-				ipc.NewBodySender([]byte(bodyOther), ic),
+				ipc2.NewBodySender([]byte(bodyOther), ic),
 				ic,
 			)
 
@@ -264,29 +263,29 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 	})
 
 	///proxy/pubsub/subscribe_msg
-	serverIPC.OnRequest(func(req interface{}, ic ipc.IPC) {
+	serverIPC.OnRequest(func(req interface{}, ic ipc2.IPC) {
 
-		request := req.(*ipc.Request)
+		request := req.(*ipc2.Request)
 		log.Println("on request: ", request.ID)
 		url, _ := url.ParseRequestURI(request.URL)
 
 		if (url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/publish_msg" ||
 			(url.Host+url.Path) == "127.0.0.1:8000/proxy/pubsub/subscribe_msg" && request.Method == "POST" {
 
-			bodyReceiver := request.Body.(*ipc.BodyReceiver)
+			bodyReceiver := request.Body.(*ipc2.BodyReceiver)
 			body1 := bodyReceiver.GetMetaBody().Data
 			log.Println("onRequest: ", request.URL, string(body1), ic)
 			log.Printf("subscribe_msg post body is: %#v\n", request.Body)
 			log.Printf("subscribe_msg Header is %#v\n: ", request.Header)
 
 			body := `{"code": 0, "message": "subscribe_msg"}`
-			res := ipc.NewResponse(
+			res := ipc2.NewResponse(
 				request.ID,
 				200,
-				ipc.NewHeaderWithExtra(map[string]string{
+				ipc2.NewHeaderWithExtra(map[string]string{
 					"Content-Type": "application/json",
 				}),
-				ipc.NewBodySender([]byte(body), ic),
+				ipc2.NewBodySender([]byte(body), ic),
 				ic,
 			)
 
@@ -296,7 +295,7 @@ func newIPCConn(conn *websocket.Conn) *IPCConn {
 		}
 	})
 
-	inputStream := ipc.NewReadableStream()
+	inputStream := ipc2.NewReadableStream()
 
 	ipcConn := &IPCConn{
 		ipc:         serverIPC,

@@ -5,7 +5,7 @@
 package dao
 
 import (
-	"proxyServer/internal/dao/internal"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/dao/internal"
 )
 
 // internalUserDao is internal type for wrapping internal DAO implements.

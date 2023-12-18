@@ -1,6 +1,6 @@
 package model
 
-import "proxyServer/internal/dao"
+import "github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 
 type AppModuleCreateInput struct {
 	NetId    string

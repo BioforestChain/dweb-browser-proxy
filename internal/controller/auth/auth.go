@@ -3,9 +3,9 @@ package auth
 import (
 	"context"
 	"fmt"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "proxyServer/api/client/v1"
-	"proxyServer/internal/service"
 )
 
 type Controller struct{}

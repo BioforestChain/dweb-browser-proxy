@@ -1,4 +1,4 @@
-module proxyServer
+module github.com/BioforestChain/dweb-browser-proxy
 
 go 1.20
 
