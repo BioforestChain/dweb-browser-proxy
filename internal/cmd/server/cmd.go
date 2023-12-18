@@ -56,11 +56,11 @@ var (
 				})
 
 				group.POST("/pubsub/test/pub", func(r *ghttp.Request) {
-					controller.PubSub.Pub(ctx, r.Response.Writer, r.Request)
+					controller.PubSub.Pub(ctx, hub, r.Response.Writer, r)
 				})
 
 				group.POST("/pubsub/test/sub", func(r *ghttp.Request) {
-					controller.PubSub.Sub(ctx, hub, r.Response.Writer, r.Request)
+					controller.PubSub.Sub(ctx, hub, r.Response.Writer, r)
 				})
 				//
 				//group.GET("/cOnReq", func(r *ghttp.Request) {

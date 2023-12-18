@@ -60,11 +60,3 @@ func (h *Hub) GetClient(clientID string) *Client {
 	}
 	return client
 }
-
-func (h *Hub) Online(clientID string) bool {
-	_, ok := h.clients[clientID]
-	if ok {
-		return true
-	}
-	return false
-}

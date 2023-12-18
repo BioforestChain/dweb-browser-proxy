@@ -6,6 +6,7 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	"github.com/gogf/gf/v2/net/ghttp"
 	"io"
 	"net/http"
 )
@@ -15,7 +16,7 @@ var PubSub = new(pubsub)
 type pubsub struct {
 }
 
-func (pb *pubsub) Pub(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (pb *pubsub) Pub(ctx context.Context, hub *ws.Hub, w http.ResponseWriter, r *ghttp.Request) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
@@ -25,7 +26,10 @@ func (pb *pubsub) Pub(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	request := ipc.FromRequestBinary(1, "/pub", http.MethodPost, ipc.NewHeader(), data, ipc.NewBaseIPC())
 
-	err = pkg.DefaultPubSub.Pub(ctx, request)
+	// TODO for test
+	client := hub.GetClient(r.GetQuery("client_id").String())
+
+	err = pkg.DefaultPubSub.Pub(ctx, request, client)
 	msg := "ok"
 	if err != nil {
 		msg = err.Error()
@@ -34,10 +38,9 @@ func (pb *pubsub) Pub(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	fmt.Fprintf(w, msg)
 }
 
-func (pb *pubsub) Sub(ctx context.Context, hub *ws.Hub, w http.ResponseWriter, r *http.Request) {
-	//client := &ws.Client{hub: hub, Shutdown: make(chan struct{})}
+func (pb *pubsub) Sub(ctx context.Context, hub *ws.Hub, w http.ResponseWriter, r *ghttp.Request) {
 	// TODO for test
-	client := ws.NewClient("", hub, nil, nil)
+	client := hub.GetClient(r.GetQuery("client_id").String())
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {

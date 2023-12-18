@@ -1,7 +1,7 @@
 package ws
 
 import (
-	ipc2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
 	"log"
 	"sync"
 	"time"
@@ -43,9 +43,9 @@ type Client struct {
 	// Buffered channel of outbound message.
 	//send chan []byte
 
-	ipc ipc2.IPC
+	ipc ipc.IPC
 
-	inputStream *ipc2.ReadableStream
+	inputStream *ipc.ReadableStream
 
 	closed bool
 
@@ -54,13 +54,13 @@ type Client struct {
 	Shutdown chan struct{}
 }
 
-func NewClient(ID string, hub *Hub, conn *websocket.Conn, ipc ipc2.IPC) *Client {
+func NewClient(ID string, hub *Hub, conn *websocket.Conn, ipcIns ipc.IPC) *Client {
 	return &Client{
 		ID:          ID,
 		hub:         hub,
 		conn:        conn,
-		ipc:         ipc,
-		inputStream: ipc2.NewReadableStream(),
+		ipc:         ipcIns,
+		inputStream: ipc.NewReadableStream(),
 		Shutdown:    make(chan struct{}),
 	}
 }
@@ -172,16 +172,12 @@ func (c *Client) GetHub() *Hub {
 	return c.hub
 }
 
-func (c *Client) GetIpc() ipc2.IPC {
+func (c *Client) GetIpc() ipc.IPC {
 	return c.ipc
 }
 
-func (c *Client) GetInputStream() *ipc2.ReadableStream {
+func (c *Client) GetInputStream() *ipc.ReadableStream {
 	return c.inputStream
-}
-
-func (c *Client) Online() bool {
-	return c.hub.Online(c.ID)
 }
 
 func (c *Client) Close() {
