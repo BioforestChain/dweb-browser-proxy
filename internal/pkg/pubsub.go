@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
 	redisHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/redis"
@@ -307,10 +306,10 @@ func (pb *PubSub) Pub(ctx context.Context, request *ipc.Request, client *ws.Clie
 		return
 	}
 
-	// 发布数据时，如果用户未订阅，则不进行订阅操作，同时返回订阅提醒
-	if !pb.hasSub(client.ID, ipcBodyData.Topic) {
-		return errors.New("please subscribe before publish messages")
-	}
+	// 发布数据时，如果自己未订阅，则不进行订阅操作，同时返回订阅提醒
+	//if !pb.hasSub(client.ID, ipcBodyData.Topic) {
+	//	return errors.New("please subscribe before publish messages")
+	//}
 
 	_, err = NewCache(ctx).RedisCli.Pub(ctx, ipcBodyData.Topic, ipcBodyData.Data)
 	if err != nil {
