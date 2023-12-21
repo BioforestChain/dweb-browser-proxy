@@ -20,9 +20,9 @@ type (
 )
 
 func init() {
-	service.RegisterPermission(New())
+	service.RegisterPubsubPermission(New())
 }
-func New() service.IPermission {
+func New() service.IPubsubPermission {
 	return &sPubsubPermission{}
 }
 
@@ -47,7 +47,7 @@ func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model
 
 	// query
 	if queryPid, err = dao.PubsubPermission.Ctx(ctx).Fields("id").Where(g.Map{
-		"name =":      in.Name,
+		"topic =":     in.Topic,
 		"publisher =": in.XDwebHostMMID,
 		"type =":      in.Type,
 	}).Value(); err != nil {
@@ -71,8 +71,8 @@ func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model
 	}
 	//save Permission
 	err = dao.PubsubPermission.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
-		if result, err = dao.PubsubPermission.Ctx(ctx).Data(do.Permission{
-			Name:      in.Name,
+		if result, err = dao.PubsubPermission.Ctx(ctx).Data(do.PubsubPermission{
+			Topic:     in.Topic,
 			Type:      in.Type,
 			Publisher: in.XDwebHostMMID,
 		}).Insert(); err != nil {
@@ -105,16 +105,16 @@ func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model
 	// result PubsubPermissionDetailRes
 	entity = new(v1.PubsubPermissionDetailRes)
 	entity.Id = int(getPriKey)
-	entity.Name = in.Name
+	entity.Topic = in.Topic
 	entity.Type = in.Type
 	entity.Publisher = in.XDwebHostMMID
 	entity.List = pubsubUserAclList
 	return entity, nil
 }
 
-func (s *sPubsubPermission) IsPubsubPermissionTopicNameExist(ctx context.Context, Name string) (bool, error) {
-	count, err := dao.PubsubPermission.Ctx(ctx).Where(do.Permission{
-		Name: Name,
+func (s *sPubsubPermission) IsPubsubPermissionTopicNameExist(ctx context.Context, Topic string) (bool, error) {
+	count, err := dao.PubsubPermission.Ctx(ctx).Where(do.PubsubPermission{
+		Topic: Topic,
 	}).Count()
 	if err != nil {
 		return false, err

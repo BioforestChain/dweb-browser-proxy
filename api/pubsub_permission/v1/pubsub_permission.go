@@ -11,7 +11,7 @@ type Req struct {
 type RegReq struct {
 	g.Meta `path:"/permission/reg" tags:"PermissionReg" method:"post" summary:"You first permission reg api"`
 	Id     int64  `v:""`         //
-	Name   string `v:"required"` //订阅的主题名
+	Topic  string `v:"required"` //订阅的主题名
 	Type   uint32 `v:"required"` //权限类型: 0:无认证，1:acl，2:基于密码，3:基于角色，4:etc
 	//Publisher      string `v:"required"` //创建者，（若chat场景是群主）
 	NetDomainNames string `v:"required"` //acl中被授权的netDomain
@@ -22,7 +22,7 @@ type Res struct {
 
 type PubsubPermissionDetailRes struct {
 	Id        int                     `json:"id"        description:""`
-	Name      string                  `json:"name"      description:"订阅的主题名"`
+	Topic     string                  `json:"name"      description:"订阅的主题名"`
 	Type      uint32                  `json:"type"      description:"权限类型: 0:无认证，1:acl，2:基于密码，3:基于角色，4:etc"`
 	Publisher string                  `json:"publisher" description:"创建者"`
 	List      []*entity.PubsubUserAcl `json:"list"`

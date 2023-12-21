@@ -37,9 +37,9 @@ func (c *Controller) Reg(ctx context.Context, req *v1.RegReq) (res *v1.PubsubPer
 		return nil, err
 	}
 
-	res, err = service.Permission().CreatePubsubPermission(ctx, model.PubsubPermissionCreateInput{
+	res, err = service.PubsubPermission().CreatePubsubPermission(ctx, model.PubsubPermissionCreateInput{
 		Id:             req.Id,
-		Name:           req.Name,
+		Topic:          req.Topic,
 		Type:           req.Type,
 		NetDomainNames: req.NetDomainNames,
 		XDwebHostMMID:  g.RequestFromCtx(ctx).Header.Get(consts.XDwebHostMMID),
