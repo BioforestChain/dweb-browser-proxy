@@ -7,9 +7,9 @@ package service
 
 import (
 	"context"
+
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
-	//"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
 )
 
 type (
@@ -17,7 +17,7 @@ type (
 		CreateNetModule(ctx context.Context, in model.NetModuleCreateInput) (entity *v1.ClientNetModuleDetailRes, err error)
 		GetNetModuleDetailById(ctx context.Context, in model.NetModuleDetailInput) (entity *v1.ClientNetModuleDetailRes, err error)
 		GetNetModuleList(ctx context.Context, in model.NetModuleListQueryInput) (entities []*v1.ClientNetModuleDetailRes, total int, err error)
-		IsDomainExist(ctx context.Context, Domain string) (bool, error)
+		IsServerAddrExist(ctx context.Context, serverAddr string) (bool, error)
 	}
 )
 

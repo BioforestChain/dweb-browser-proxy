@@ -10,14 +10,16 @@ import (
 
 // Net is the golang structure for table net.
 type Net struct {
-	Id        int64       `json:"id"        description:""`
-	NetId     string      `json:"netId"     description:"网络模块id"`
-	Domain    string      `json:"domain"    description:"域名"`
-	Remark    string      `json:"remark"    description:"备注信息"`
-	Timestamp int         `json:"timestamp" description:"时间戳"`
-	Port      int         `json:"port"      description:"端口"`
-	IsOnline  int         `json:"isOnline"  description:"上线：1上线，0下线"`
-	CreatedAt *gtime.Time `json:"createdAt" description:"Created Time"`
-	UpdateAt  *gtime.Time `json:"updateAt"  description:"Updated Time"`
-	DeletedAt *gtime.Time `json:"deletedAt" description:"Deleted Time"`
+	Id               int64       `json:"id"               description:""`
+	NetId            string      `json:"netId"            description:"网络模块id"`
+	ServerAddr       string      `json:"serverAddr"       description:"服务地址"`
+	BroadcastAddress string      `json:"broadcastAddress" description:"广播地址"`
+	Remark           string      `json:"remark"           description:"备注信息"`
+	Timestamp        int         `json:"timestamp"        description:"时间戳"`
+	Port             int         `json:"port"             description:"端口"`
+	IsOnline         int         `json:"isOnline"         description:"上线：1上线，0下线"`
+	CreatedAt        *gtime.Time `json:"createdAt"        description:"Created Time"`
+	UpdateAt         *gtime.Time `json:"updateAt"         description:"Updated Time"`
+	DeletedAt        *gtime.Time `json:"deletedAt"        description:"Deleted Time"`
+	IsSelected       int         `json:"isSelected"       description:"是否选中"`
 }

@@ -15,7 +15,7 @@ import (
 
 type NetModuleCreateInput struct {
 	Id               int64
-	Domain           string
+	ServerAddr       string
 	Port             uint32
 	Secret           string
 	BroadcastAddress string

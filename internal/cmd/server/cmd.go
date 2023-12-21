@@ -8,6 +8,7 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/net"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/ping"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pre_user"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pubsub_permission"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/middleware"
 	ws2 "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
 	"github.com/gogf/gf/v2/frame/g"
@@ -43,6 +44,7 @@ var (
 				group.Group("/", func(group *ghttp.RouterGroup) {
 					group.Bind(
 						ping.New(),
+						pubsub_permission.New(),
 						//auth.New(),
 						pre_user.New(),
 						net.New(),

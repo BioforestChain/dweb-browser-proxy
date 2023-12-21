@@ -3,16 +3,16 @@ package net
 import (
 	"context"
 	"database/sql"
-	"github.com/gogf/gf/v2/database/gdb"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"log"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
+	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"log"
 	"strings"
 	"time"
 )
@@ -49,13 +49,13 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	if in.Secret != secret.String() {
 		return nil, gerror.Newf(`Sorry, your secret "%s" is wrong yet`, in.Secret)
 	}
-	domain := in.Domain
+	serverAddr := in.ServerAddr
 	// update.
 	if in.Id > 0 {
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			result, err = dao.Net.Ctx(ctx).Data(do.Net{
 				Id:               in.Id,
-				Domain:           domain,
+				ServerAddr:       serverAddr,
 				Port:             in.Port,
 				Timestamp:        nowTimestamp,
 				BroadcastAddress: in.BroadcastAddress,
@@ -72,15 +72,15 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	} else {
 		// add.
 		// IsDomain checks.
-		if available, err = s.IsDomainExist(ctx, domain); err != nil {
+		if available, err = s.IsServerAddrExist(ctx, serverAddr); err != nil {
 			return nil, err
 		}
 		if available {
-			return nil, gerror.Newf(`Sorry, your domain "%s" has been registered yet`, in.Domain)
+			return nil, gerror.Newf(`Sorry, your server addr "%s" has been registered yet`, in.ServerAddr)
 		}
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 			result, err = dao.Net.Ctx(ctx).Data(do.Net{
-				Domain:           domain,
+				ServerAddr:       serverAddr,
 				Port:             in.Port,
 				Timestamp:        nowTimestamp,
 				BroadcastAddress: in.BroadcastAddress,
@@ -109,7 +109,7 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	if err = findOne.Struct(&entity); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	entity.Domain = in.Domain
+	entity.Domain = in.ServerAddr
 	parts := strings.Split(in.BroadcastAddress, ".")
 	tld := parts[len(parts)-2] + "." + parts[len(parts)-1]
 	// 获取 top level domain
@@ -212,9 +212,9 @@ func (s *sNet) GetNetModuleList(ctx context.Context, in model.NetModuleListQuery
 //	@param identification
 //	@return bool
 //	@return error
-func (s *sNet) IsDomainExist(ctx context.Context, Domain string) (bool, error) {
+func (s *sNet) IsServerAddrExist(ctx context.Context, serverAddr string) (bool, error) {
 	count, err := dao.Net.Ctx(ctx).Where(do.Net{
-		Domain: Domain,
+		ServerAddr: serverAddr,
 	}).Count()
 	if err != nil {
 		return false, err

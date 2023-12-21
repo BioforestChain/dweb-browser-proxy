@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 	redisHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/redis"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	"github.com/gogf/gf/v2/container/gvar"
+	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
@@ -30,7 +34,7 @@ type IpcBodyData struct {
 	Data  string `json:"data"`
 }
 type IpcHeaderData struct {
-	XDwebHost string `json:"X-Dweb-Host"` // X-Dweb-Pubsub
+	XDwebHostMMID string `json:"X-Dweb-Host"` // X-Dweb-Pubsub
 	//XDWebPubSub       string `json:"X-Dweb-Pubsub"`
 	XDWebPubSubApp string `json:"X-Dweb-Pubsub-App"`
 	//XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
@@ -161,17 +165,17 @@ func (pb *PubSub) Handler(ctx context.Context, request *ipc.Request, client *ws.
 		return
 	}
 
-	subPath := fmt.Sprintf("/%s/sub", request.Header.Get("X-Dweb-Pubsub-App"))
+	subPath := fmt.Sprintf("/%s/sub", request.Header.Get(consts.PubsubAppMMID))
 	if parsedURL.Path == subPath && request.Method == ipc.POST {
 		if err = pb.Sub(ctx, request, client); err != nil {
 			return
 		}
 	}
 
-	pubPath := fmt.Sprintf("/%s/pub", request.Header.Get("X-Dweb-Pubsub-App"))
+	pubPath := fmt.Sprintf("/%s/pub", request.Header.Get(consts.PubsubAppMMID))
 	if parsedURL.Path == pubPath && request.Method == ipc.POST {
-		if err = pb.Pub(ctx, request, client); err != nil {
-			return
+		if _, err := pb.Pub(ctx, request, client); err != nil {
+			return err
 		}
 	}
 
@@ -187,6 +191,7 @@ func (pb *PubSub) Handler(ctx context.Context, request *ipc.Request, client *ws.
 //	@param ipcBodyData
 //	@param client
 //	@return err
+
 func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Client) (err error) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -198,25 +203,30 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 		// TODO 日志上报
 		return
 	}
-
-	getXDWebPubSub := request.Header["X-Dweb-Pubsub"]
-	getXDWebPubSubDomain := request.Header["X-Dweb-Pubsub-Net-Domain"]
-	getXDWebPubSubApp := request.Header["X-Dweb-Pubsub-App"]
-	topic := ipcBodyData.Topic
-
-	// 处理重复订阅
-	if pb.hasSub(client.ID, topic) {
+	// check NetDomain in acl list start
+	xDWebHostDomain := request.Header.Get(consts.XDwebHostDomain) //net domain
+	//xDwebHostMMID := request.Header.Get(consts.XDwebHostMMID)     //net module mmid
+	xDWebPubSub := request.Header.Get(consts.PubsubMMID)       //pubsub module  mmid
+	xDWebPubSubApp := request.Header.Get(consts.PubsubAppMMID) //app mmid that use pubsub
+	topicName := request.Header.Get(consts.PubsubAppMMID) + "_" + ipcBodyData.Topic
+	resInAcl, err := CheckExistNetDomainInAclList(ctx, topicName, xDWebHostDomain)
+	if err != nil {
+		return err
+	}
+	if !resInAcl {
 		return
 	}
-
+	// 处理重复订阅
+	if pb.hasSub(client.ID, topicName) {
+		return
+	}
 	// 存储映射
-	// topic ----netDomain
-	_, err = NewCache(ctx).RedisCli.SAdd(ctx, getCacheKey(topic), getXDWebPubSubDomain)
+	_, err = NewCache(ctx).RedisCli.SAdd(ctx, getCacheKey(topicName), xDWebHostDomain)
 	if err != nil {
 		return
 	}
 
-	pb.setSub(client.ID, topic)
+	pb.setSub(client.ID, topicName)
 
 	ctxChild, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -232,7 +242,7 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 				fmt.Println("============panic Sub callback getPub's data ============", err)
 			}
 
-			pb.delSub(client.ID, topic)
+			pb.delSub(client.ID, topicName)
 		}()
 
 		err = NewCache(ctxChild).RedisCli.Sub(ctxChild, func(data *redis.Message) error {
@@ -255,11 +265,11 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 				//}
 				ipcCombHeaderBody := new(IpcEventDataHeaderBody)
 				ipcCombHeaderBody.Headers = IpcHeaderData{
-					XDwebHost:      getXDWebPubSub,
-					XDWebPubSubApp: getXDWebPubSubApp,
+					XDwebHostMMID:  xDWebPubSub,
+					XDWebPubSubApp: xDWebPubSubApp,
 				}
 				ipcCombHeaderBody.Body = IpcBodyData{
-					topic, data.Payload,
+					topicName, data.Payload,
 				}
 				bodyData, err := json.Marshal(ipcCombHeaderBody)
 				if err != nil {
@@ -267,7 +277,7 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 					return
 				}
 
-				eventData := ipc.NewEventBase64(topic, bodyData)
+				eventData := ipc.NewEventBase64(topicName, bodyData)
 				if err := client.GetIpc().PostMessage(ctx, eventData); err != nil {
 					// TODO 日志上报
 					log.Println("ipc PostMessage err is: ", err)
@@ -275,8 +285,8 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 				}
 			}()
 			return nil
+		}, topicName)
 
-		}, ipcBodyData.Topic)
 		if err != nil {
 			// TODO
 			log.Println("RedisCli sub err: ", err)
@@ -287,6 +297,7 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 }
 
 // Pub
+// TODO : topic 唯一性 appMmid+topic
 //
 //	@Description: 处理Pub逻辑
 //	@param ctx
@@ -294,7 +305,7 @@ func (pb *PubSub) Sub(ctx context.Context, request *ipc.Request, client *ws.Clie
 //	@param ipcBodyData
 //	@param client
 //	@return err
-func (pb *PubSub) Pub(ctx context.Context, request *ipc.Request, client *ws.Client) (err error) {
+func (pb *PubSub) Pub(ctx context.Context, request *ipc.Request, client *ws.Client) (res bool, err error) {
 	var ipcBodyData IpcBodyData
 
 	body, err := io.ReadAll(request.Body)
@@ -305,18 +316,31 @@ func (pb *PubSub) Pub(ctx context.Context, request *ipc.Request, client *ws.Clie
 	if err = json.Unmarshal(body, &ipcBodyData); err != nil {
 		return
 	}
+	topicData := ipcBodyData.Data
+	topicName := request.Header.Get(consts.PubsubAppMMID) + "_" + ipcBodyData.Topic
 
 	// 发布数据时，如果自己未订阅，则不进行订阅操作，同时返回订阅提醒
 	//if !pb.hasSub(client.ID, ipcBodyData.Topic) {
 	//	return errors.New("please subscribe before publish messages")
 	//}
 
-	_, err = NewCache(ctx).RedisCli.Pub(ctx, ipcBodyData.Topic, ipcBodyData.Data)
+	// check NetDomain in acl list start
+	xDWebHostDomain := request.Header.Get(consts.XDwebHostDomain)
+	//xDWebPubSub := request.Header.Get(consts.PubsubMMID)
+	resInAcl, err := CheckExistNetDomainInAclList(ctx, topicName, xDWebHostDomain)
+	if err != nil {
+		return false, err
+	}
+	if !resInAcl {
+		return
+	}
+	// TODO 发布数据时，如果用户未订阅，则不进行订阅操作，同时返回订阅提醒
+	resInt64, err := NewCache(ctx).RedisCli.Pub(ctx, topicName, topicData)
 	if err != nil {
 		return
 	}
 
-	return nil
+	return resInt64 > 0, nil
 }
 
 func (pb *PubSub) hasSub(clientID, topic string) bool {
@@ -355,4 +379,30 @@ func (pb *PubSub) delSub(clientID, topic string) {
 	}
 
 	delete(tpc, topic)
+}
+
+// 存在 ACLlist的用户
+func CheckExistNetDomainInAclList(ctx context.Context, topicName, xDWebHostDomain string) (res bool, err error) {
+	var (
+		pubSubUserAclId *gvar.Var
+		queryRes        gdb.Record
+	)
+	// check NetDomain in acl list start
+	if queryRes, err = dao.PubsubPermission.Ctx(ctx).Fields("id", "type").Where(g.Map{
+		"topic =": topicName,
+	}).One(); err != nil {
+		return false, err
+	}
+	//class is exist
+	if queryRes["type"].Int() != consts.PubsubPermissionTypeAcl {
+		return false, err
+	}
+	// query PubsubUserAcl list
+	if pubSubUserAclId, err = dao.PubsubUserAcl.Ctx(ctx).Fields("id").Where(g.Map{
+		"permission_id =": queryRes["id"],
+		"net_domain =":    xDWebHostDomain,
+	}).Value(); err != nil {
+		return false, err
+	}
+	return pubSubUserAclId.Int() > 0, nil
 }

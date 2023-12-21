@@ -20,30 +20,34 @@ type NetDao struct {
 
 // NetColumns defines and stores column names for table net.
 type NetColumns struct {
-	Id        string //
-	NetId     string // 网络模块id
-	Domain    string // 域名
-	Remark    string // 备注信息
-	Timestamp string // 时间戳
-	Port      string // 端口
-	IsOnline  string // 上线：1上线，0下线
-	CreatedAt string // Created Time
-	UpdateAt  string // Updated Time
-	DeletedAt string // Deleted Time
+	Id               string //
+	NetId            string // 网络模块id
+	ServerAddr       string // 服务地址
+	BroadcastAddress string // 广播地址
+	Remark           string // 备注信息
+	Timestamp        string // 时间戳
+	Port             string // 端口
+	IsOnline         string // 上线：1上线，0下线
+	CreatedAt        string // Created Time
+	UpdateAt         string // Updated Time
+	DeletedAt        string // Deleted Time
+	IsSelected       string // 是否选中
 }
 
 // netColumns holds the columns for table net.
 var netColumns = NetColumns{
-	Id:        "id",
-	NetId:     "net_id",
-	Domain:    "domain",
-	Remark:    "remark",
-	Timestamp: "timestamp",
-	Port:      "port",
-	IsOnline:  "is_online",
-	CreatedAt: "created_at",
-	UpdateAt:  "update_at",
-	DeletedAt: "deleted_at",
+	Id:               "id",
+	NetId:            "net_id",
+	ServerAddr:       "server_addr",
+	BroadcastAddress: "broadcast_address",
+	Remark:           "remark",
+	Timestamp:        "timestamp",
+	Port:             "port",
+	IsOnline:         "is_online",
+	CreatedAt:        "created_at",
+	UpdateAt:         "update_at",
+	DeletedAt:        "deleted_at",
+	IsSelected:       "is_selected",
 }
 
 // NewNetDao creates and returns a new DAO object for table data access.

@@ -22,7 +22,7 @@ import (
 type ClientNetModuleRegReq struct {
 	g.Meta           `path:"/user/net-module-reg" tags:"ClientNetModuleRegService" method:"post" summary:"Sign up a new client net-module"`
 	Id               int64  `v:""`         //
-	Domain           string `v:"required"` //服务地址
+	ServerAddr       string `v:"required"` //服务地址
 	Port             uint32 `v:"required"` //端口
 	Secret           string `v:"required"` //密钥
 	BroadcastAddress string `v:"required"` //广播地址

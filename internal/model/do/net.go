@@ -14,7 +14,7 @@ type Net struct {
 	g.Meta           `orm:"table:net, do:true"`
 	Id               interface{} `json:"id"`                   //
 	NetId            interface{} `json:"net_id"`               // 网络模块id
-	Domain           interface{} `json:"domain"`               // 服务地址
+	ServerAddr       interface{} `json:"server_addr"`          // 服务地址
 	BroadcastAddress interface{} `json:"broadcast_address"`    // 广播地址
 	Remark           interface{} `json:"remark"`               // 备注信息
 	Timestamp        interface{} `json:"timestamp"`            // 时间戳

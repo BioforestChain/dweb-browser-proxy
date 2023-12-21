@@ -8,19 +8,19 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/dao/internal"
 )
 
-// internalUserDao is internal type for wrapping internal DAO implements.
-type internalUserDao = *internal.UserDao
+// internalPubsubPermissionDao is internal type for wrapping internal DAO implements.
+type internalPubsubPermissionDao = *internal.PubsubPermissionDao
 
-// UserDao is the data access object for table user.
+// pubsubPermissionDao is the data access object for table pubsub_permission.
 // You can define custom methods on it to extend its functionality as you wish.
-type UserDao struct {
-	internalUserDao
+type pubsubPermissionDao struct {
+	internalPubsubPermissionDao
 }
 
 var (
-	// User is globally public accessible object for table user operations.
-	User = UserDao{
-		internal.NewUserDao(),
+	// PubsubPermission is globally public accessible object for table pubsub_permission operations.
+	PubsubPermission = pubsubPermissionDao{
+		internal.NewPubsubPermissionDao(),
 	}
 )
 

@@ -46,7 +46,7 @@ func (c *Controller) NetModuleReg(ctx context.Context, req *v1.ClientNetModuleRe
 	res, err = service.Net().CreateNetModule(ctx, model.NetModuleCreateInput{
 		Id:               req.Id,
 		NetId:            req.NetId,
-		Domain:           req.Domain,
+		ServerAddr:       req.ServerAddr,
 		Secret:           req.Secret,
 		Port:             req.Port,
 		BroadcastAddress: req.BroadcastAddress,
