@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
 	timeHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/time"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
+	"time"
 )
 
 type (
@@ -36,8 +36,8 @@ func (s *sAuth) GenToken(ctx context.Context, UserId uint32, UserIdentification 
 	res.UserIdentification = UserIdentification
 	res.Token = token
 	res.RefreshToken = refreshToken
-	res.NowTime = timeHelper.Date(timeHelper.Time(), consts.DefaultDateFormat)
-	res.ExpireTime = timeHelper.Date(expireTime, consts.DefaultDateFormat)
+	res.NowTime = timeHelper.Date(timeHelper.Time(), time.DateTime)
+	res.ExpireTime = timeHelper.Date(expireTime, time.DateTime)
 	return res
 }
 
@@ -62,7 +62,7 @@ func (s *sAuth) RefreshToken(ctx context.Context, req *v1.ClientRefreshTokenReq)
 	res.UserIdentification = refreshTokenRes.UserIdentification
 	res.Token = refreshTokenRes.Token
 	res.RefreshToken = refreshTokenRes.RefreshToken
-	res.ExpireTime = timeHelper.Date(refreshTokenRes.ExpireTime, consts.DefaultDateFormat)
-	res.NowTime = timeHelper.Date(timeHelper.Time(), consts.DefaultDateFormat)
+	res.ExpireTime = timeHelper.Date(refreshTokenRes.ExpireTime, time.DateTime)
+	res.NowTime = timeHelper.Date(timeHelper.Time(), time.DateTime)
 	return res
 }
