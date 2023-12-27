@@ -50,6 +50,7 @@ func (c *Controller) NetModuleReg(ctx context.Context, req *v1.ClientNetModuleRe
 		Secret:           req.Secret,
 		Port:             req.Port,
 		BroadcastAddress: req.BroadcastAddress,
+		U:                req.U,
 	})
 	return
 }

@@ -20,6 +20,7 @@ type NetModuleCreateInput struct {
 	Secret           string
 	BroadcastAddress string
 	NetId            string
+	U                string
 }
 type NetModuleDetailInput struct {
 	Id uint32

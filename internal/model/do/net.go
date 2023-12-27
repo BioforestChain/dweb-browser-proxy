@@ -19,6 +19,7 @@ type Net struct {
 	Remark           interface{} `json:"remark"`               // 备注信息
 	Timestamp        interface{} `json:"timestamp"`            // 时间戳
 	Port             interface{} `json:"port"`                 // 端口
+	Uuid             interface{} `json:"uuid"`                 // 设备uuid
 	IsOnline         interface{} `json:"is_online"`            // 上线：1上线，0下线
 	CreatedAt        *gtime.Time `json:"created_at"`           // Created Time
 	UpdateAt         *gtime.Time `json:"update_at"`            // Updated Time

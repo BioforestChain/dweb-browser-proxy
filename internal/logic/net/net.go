@@ -7,6 +7,8 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/rsa"
+	stringsHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/strings"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gcode"
@@ -50,6 +52,12 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 		return nil, gerror.Newf(`Sorry, your secret "%s" is wrong yet`, in.Secret)
 	}
 	serverAddr := in.ServerAddr
+	if available, err = s.IsBroadcastAddressExist(ctx, in.BroadcastAddress, in.U); err != nil {
+		return nil, err
+	}
+	if available {
+		return nil, gerror.Newf(`Sorry, your broadcast address  "%s" has been registered yet`, in.BroadcastAddress)
+	}
 	// update.
 	if in.Id > 0 {
 		err = dao.Net.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
@@ -60,6 +68,7 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 				Timestamp:        nowTimestamp,
 				BroadcastAddress: in.BroadcastAddress,
 				NetId:            in.NetId,
+				Uuid:             in.U,
 			}).Where(g.Map{
 				"id =": in.Id,
 			}).Save()
@@ -85,6 +94,7 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 				Timestamp:        nowTimestamp,
 				BroadcastAddress: in.BroadcastAddress,
 				NetId:            in.NetId,
+				Uuid:             in.U,
 			}).Insert()
 			log.Printf("dao Net panic: ", err)
 			if err != nil {
@@ -116,7 +126,20 @@ func (s *sNet) CreateNetModule(ctx context.Context, in model.NetModuleCreateInpu
 	entity.RootDomain = tld
 	// 用一级域名替换域名得到子串
 	entity.PrefixBroadcastAddress = strings.Replace(in.BroadcastAddress, "."+tld, "", 1)
+	prvKey, pubKey := s.getPrvPubRSAKey()
+	entity.PrivateKey = prvKey
+	entity.PublicKey = pubKey
 	return entity, nil
+}
+
+// getPrvPubRSAKey
+//
+//	@Description: /Rsa/gen
+//	@receiver c
+//	@since: time
+func (c *sNet) getPrvPubRSAKey() (prvKey, pubKey string) {
+	prvKeySrc, pubKeySrc := rsa.GenRsaKey()
+	return stringsHelper.BytesToStr(prvKeySrc), stringsHelper.BytesToStr(pubKeySrc)
 }
 
 // GetNetModuleDetailById
@@ -204,7 +227,7 @@ func (s *sNet) GetNetModuleList(ctx context.Context, in model.NetModuleListQuery
 //	return appInfo, err
 //}
 
-// IsDomainAvailable
+// IsServerAddrExist
 //
 //	@Description: Net表中域名是否有重复数据
 //	@receiver s
@@ -215,6 +238,25 @@ func (s *sNet) GetNetModuleList(ctx context.Context, in model.NetModuleListQuery
 func (s *sNet) IsServerAddrExist(ctx context.Context, serverAddr string) (bool, error) {
 	count, err := dao.Net.Ctx(ctx).Where(do.Net{
 		ServerAddr: serverAddr,
+	}).Count()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// IsBroadcastAddressExist
+//
+//	@Description: Net表中broadcast_address是否合法存在，无有重复数据
+//	@receiver s
+//	@param ctx
+//	@param identification
+//	@return bool
+//	@return error
+func (s *sNet) IsBroadcastAddressExist(ctx context.Context, broadcastAddress, uuid string) (bool, error) {
+	count, err := dao.Net.Ctx(ctx).Where(do.Net{
+		BroadcastAddress: broadcastAddress,
+		Uuid:             uuid,
 	}).Count()
 	if err != nil {
 		return false, err

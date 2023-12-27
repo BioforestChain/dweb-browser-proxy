@@ -28,6 +28,7 @@ type ClientNetModuleRegReq struct {
 	BroadcastAddress string `v:"required"` //广播地址
 	//RootDomain       string `v:"required"` //
 	NetId string `v:"required"` //网络模块id
+	U     string `v:"required"` //设备的 uuid
 }
 type ClientNetModuleDetailReq struct {
 	g.Meta `path:"/user/net-module-detail" tags:"ClientNetModuleDetailService" method:"get" summary:"Get net-module detail by id"`
@@ -48,6 +49,8 @@ type ClientNetModuleDetailRes struct {
 	CreatedAt              *gtime.Time `json:"created_at"`               // Created Time
 	UpdateAt               *gtime.Time `json:"update_at"`                // Updated Time
 	IsSelected             interface{} `json:"is_selected"`              // 是否选中
+	PrivateKey             interface{} `json:"private_key"`              // rsa私钥
+	PublicKey              interface{} `json:"public_key"`               // rsa公钥
 }
 
 type ClientNetModuleListReq struct {
