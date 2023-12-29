@@ -14,16 +14,21 @@ import (
 )
 
 type NetModuleCreateInput struct {
-	Id               int64
-	ServerAddr       string
-	Port             uint32
-	Secret           string
-	BroadcastAddress string
-	NetId            string
-	U                string
+	Id                     int64
+	ServerAddr             string
+	Port                   uint32
+	Secret                 string
+	BroadcastAddress       string
+	NetId                  string
+	PublicKey              string
+	PrefixBroadcastAddress string
+	RootDomain             string
 }
 type NetModuleDetailInput struct {
 	Id uint32
+}
+type NetModulePublicKeyInput struct {
+	BroadcastAddress string
 }
 type NetModuleListQueryInput struct {
 	dao.PaginationSearch

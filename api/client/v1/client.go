@@ -27,12 +27,16 @@ type ClientNetModuleRegReq struct {
 	Secret           string `v:"required"` //密钥
 	BroadcastAddress string `v:"required"` //广播地址
 	//RootDomain       string `v:"required"` //
-	NetId string `v:"required"` //网络模块id
-	U     string `v:"required"` //设备的 uuid
+	NetId     string `v:"required"` //网络模块id
+	PublicKey string `v:"required"` //jmm生成的公钥
 }
 type ClientNetModuleDetailReq struct {
 	g.Meta `path:"/user/net-module-detail" tags:"ClientNetModuleDetailService" method:"get" summary:"Get net-module detail by id"`
 	Id     uint32 `v:"bail|required|integer"` //id
+}
+
+type ClientNetModulePublicKeyRes struct {
+	PublicKey string `json:"public_key"` // rsa公钥
 }
 
 type ClientNetModuleDetailRes struct {

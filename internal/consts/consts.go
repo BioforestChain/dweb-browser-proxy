@@ -9,6 +9,11 @@ const FormatKey = "%s%s"
 const InitLimit = 10
 const InitPage = 1
 
+// prefixBroadcastAddress len
+// 合法
+const MinLenLimitLegality = 7
+const MinLenLimit = "6"
+
 const (
 	OpenAPITitle       = `GoFrame Demos`
 	OpenAPIDescription = `This is a simple demos HTTP server project that is using GoFrame. Enjoy 💖 `

@@ -15,7 +15,7 @@ import (
 type (
 	IPubsubPermission interface {
 		CreatePubsubPermission(ctx context.Context, in model.PubsubPermissionCreateInput) (entity *v1.PubsubPermissionDetailRes, err error)
-		IsPubsubPermissionTopicNameExist(ctx context.Context, Name string) (bool, error)
+		IsPubsubPermissionTopicNameExist(ctx context.Context, Topic string) (bool, error)
 	}
 )
 

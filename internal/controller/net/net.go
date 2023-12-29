@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/page"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"regexp"
+	"strings"
 )
 
 type Controller struct{}
@@ -30,27 +34,31 @@ func (c *Controller) NetModuleReg(ctx context.Context, req *v1.ClientNetModuleRe
 		fmt.Println("NetModuleReg Validator", err)
 		return nil, err
 	}
-	// 参数长度至多长度为9个，数字或者字母组合
-	//pattern := regexp.MustCompile(`^[a-z\d]{1,9}$`)
-	//matchDomain := pattern.MatchString(req.Domain)
-	//if !matchDomain {
-	//	return nil, gerror.Newf(`Sorry, your domain "%s" must be combination of lowercase letters and numbers,the length is 1 to 9 yet`, req.Domain)
-	//}
 
-	//rule := "regex:`[a-z\\d]{1,9}$`"
-	//if err := g.Validator().Rules(rule).Data(req.Domain).Run(ctx); err != nil {
-	//	fmt.Println("NetModuleReg Validator Domain", err)
-	//	return nil, err
+	parts := strings.Split(req.BroadcastAddress, ".")
+	tld := parts[len(parts)-2] + "." + parts[len(parts)-1]
+	prefixBroadcastAddress := strings.Replace(req.BroadcastAddress, "."+tld, "", 1)
+	// 长度小于7
+	//if len(prefixBroadcastAddress) < consts.MinLenLimitLegality {
+	//	return nil, gerror.Newf(`Sorry, your domain "%s" must not be empty and the minimum length must be %d`, prefixBroadcastAddress, consts.MinLenLimitLegality)
 	//}
+	// 长度为0~6个，或至少包含一个字母组合
+	pattern := regexp.MustCompile(`[a-zA-Z]|^.{0,6}$`)
+	matchDomain := pattern.MatchString(prefixBroadcastAddress)
+	if matchDomain {
+		return nil, gerror.Newf(`Sorry, your domain's prefix "%s" must not be empty and must be numbers and the minimum length is %d yet`, prefixBroadcastAddress, consts.MinLenLimitLegality)
+	}
 
 	res, err = service.Net().CreateNetModule(ctx, model.NetModuleCreateInput{
-		Id:               req.Id,
-		NetId:            req.NetId,
-		ServerAddr:       req.ServerAddr,
-		Secret:           req.Secret,
-		Port:             req.Port,
-		BroadcastAddress: req.BroadcastAddress,
-		U:                req.U,
+		Id:                     req.Id,
+		NetId:                  req.NetId,
+		ServerAddr:             req.ServerAddr,
+		Secret:                 req.Secret,
+		Port:                   req.Port,
+		BroadcastAddress:       req.BroadcastAddress,
+		PublicKey:              req.PublicKey,
+		PrefixBroadcastAddress: prefixBroadcastAddress,
+		RootDomain:             tld,
 	})
 	return
 }

@@ -18,6 +18,7 @@ type (
 		GetNetModuleDetailById(ctx context.Context, in model.NetModuleDetailInput) (entity *v1.ClientNetModuleDetailRes, err error)
 		GetNetModuleList(ctx context.Context, in model.NetModuleListQueryInput) (entities []*v1.ClientNetModuleDetailRes, total int, err error)
 		IsServerAddrExist(ctx context.Context, serverAddr string) (bool, error)
+		IsBroadcastAddressExist(ctx context.Context, broadcastAddress, publicKeyMd5 string) (bool, error)
 	}
 )
 
