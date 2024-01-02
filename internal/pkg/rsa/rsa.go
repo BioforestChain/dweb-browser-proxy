@@ -81,27 +81,34 @@ func RsaSignWithSha256(data []byte, keyBytes []byte) []byte {
 	return signature
 }
 
-// 验证
+// RsaVerySignWithSha256
+//
+//	@Description: 验证填充方案使用RSASSA-PKCS1-v1_5而不是RSA-OAEP，这里通过传入的待验证数据，SPKI格式公钥，签名
+//	@param data
+//	@param signData
+//	@param pubKeyPEM
+//	@return bool
 func RsaVerySignWithSha256(data, signData, pubKeyPEM string) bool {
 	bytesSignData, err := base64.StdEncoding.DecodeString(signData)
 	if err != nil {
 		return false
 	}
 	bytesData := stringsHelper.StrToBytes(data)
-	bytePubKey := stringsHelper.StrToBytes(pubKeyPEM)
+	bytesPubKey := stringsHelper.StrToBytes(pubKeyPEM)
 
 	// 解码秘钥
-	block, _ := pem.Decode(bytePubKey)
+	block, _ := pem.Decode(bytesPubKey)
 	if block == nil {
 		fmt.Println("Failed to parse PEM block containing public key")
 		return false
 	}
-	// 使用 SHA-256 哈希算法对消息进行哈希
-	//hashed := sha256.Sum256(bytesData)
 	// 创建hash
 	hash := crypto.SHA256.New()
 	hash.Write(bytesData)
 	digest := hash.Sum(nil)
+	// 使用 SHA-256 哈希算法对消息进行哈希
+	//hashed := sha256.Sum256(bytesData)
+	//digest = hashed[:]
 	// 解析SPKI格式公钥
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
