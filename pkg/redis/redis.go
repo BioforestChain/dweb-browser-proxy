@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/number"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/util/number"
 	"github.com/redis/go-redis/v9"
 	"time"
 )

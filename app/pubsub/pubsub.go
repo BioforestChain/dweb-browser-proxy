@@ -1,14 +1,14 @@
-package pkg
+package pubsub
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
-	redisHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/redis"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/consts"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	redisHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/redis"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
@@ -50,103 +50,6 @@ type IpcEventDataHeaderBody struct {
 func getCacheKey(keyName string) string {
 	return fmt.Sprintf(consts.FormatKey, consts.RedisPrefix, keyName)
 }
-
-//var clientIPC = ipc.NewReadableStreamIPC(ipc.CLIENT, ipc.SupportProtocol{
-//	Raw:         true,
-//	MessagePack: false,
-//	ProtoBuf:    false,
-//})
-
-//func TestClientIPCOnRequest(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
-//
-//	client := &Client{
-//		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
-//		hub: hub,
-//		//conn: conn,
-//		// //send:        make(chan []byte, 256),
-//		ipc:         clientIPC,
-//		inputStream: ipc.NewReadableStream(),
-//	}
-//	//TODO 模拟数据
-//	// ~~~~~~
-//	header := map[string]string{
-//		"X-Dweb-Host":              "mmid2",
-//		"X-Dweb-Pubsub":            "mmid2",
-//		"X-Dweb-Pubsub-App":        "app_mmid2",
-//		"X-Dweb-Pubsub-Net":        "net_mmid2",
-//		"X-Dweb-Pubsub-Net-Domain": "userName_domain3",
-//	}
-//
-//	ipcBody := map[string]string{"topic": "topic_name_xx"}
-//	bodyData, err := json.Marshal(ipcBody)
-//	if err != nil {
-//		fmt.Println(err)
-//	}
-//
-//	bodySubSender := ipc.NewBodySender(bodyData, clientIPC)
-//	// ~~~~~~
-//	//TODO 模拟数据 发起IPC request
-//	//对接 js模块
-//	//go func() {
-//	clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/sub", "POST", header, bodySubSender, clientIPC), nil)
-//	//}()
-//
-//	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
-//		client := hub.GetClient(client.ID)
-//		if client == nil {
-//			return
-//		}
-//		request := data.(*ipc.Request)
-//		if request.URL == "/sub" && request.Method == ipc.POST {
-//			handlerSub(ctx, request, client)
-//		}
-//	})
-//}
-//
-//func TestClientIPCOnRequestPub(ctx context.Context, hub *Hub, w http.ResponseWriter, r *http.Request) {
-//	client := &Client{
-//		ID:  r.URL.Query().Get("client_id"), // TODO 用户id
-//		hub: hub,
-//		//conn: conn,
-//		// //send:        make(chan []byte, 256),
-//		ipc:         clientIPC,
-//		inputStream: ipc.NewReadableStream(),
-//	}
-//	//TODO 模拟数据
-//	// ~~~~~~
-//	header := map[string]string{
-//		"X-Dweb-Host":              "mmid2",
-//		"X-Dweb-Pubsub":            "mmid2",
-//		"X-Dweb-Pubsub-App":        "app_mmid2",
-//		"X-Dweb-Pubsub-Net":        "net_mmid2",
-//		"X-Dweb-Pubsub-Net-Domain": "userName_domain3",
-//	}
-//	// ~~~~~~
-//	ipcBodyPub := map[string]string{
-//		"topic": "topic_name_xx",
-//		"data":  "{\"success\":false,\"message\":\"Not Found\"}",
-//	}
-//	strPub, err := json.Marshal(ipcBodyPub)
-//	if err != nil {
-//		fmt.Println(err)
-//	}
-//	bodyPubSender := ipc.NewBodySender(strPub, clientIPC)
-//
-//	go func() {
-//		clientIPC.MsgSignal.Emit(ipc.NewRequest(1, "/pub", "POST", header, bodyPubSender, clientIPC), nil)
-//	}()
-//
-//	clientIPC.OnRequest(func(data any, ipcObj ipc.IPC) {
-//		client := hub.GetClient(client.ID)
-//		if client == nil {
-//			return
-//		}
-//		request := data.(*ipc.Request)
-//		if request.URL == "/pub" && request.Method == ipc.POST {
-//			handlerPub(ctx, request)
-//		}
-//	})
-//}
 
 var DefaultPubSub = NewPubSub()
 

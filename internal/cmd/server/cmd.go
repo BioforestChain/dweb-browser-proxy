@@ -10,7 +10,7 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pre_user"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pubsub_permission"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/middleware"
-	ws2 "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
+	ws2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/net/goai"

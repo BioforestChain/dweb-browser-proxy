@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	timeHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/time"
 	ipc2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	timeHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/time"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"

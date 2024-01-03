@@ -5,10 +5,10 @@ import (
 	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/chat/v1"
 	v1Client "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
+	pubsub2 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg"
-	redisHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/redis"
-	ws2 "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
+	redisHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/redis"
+	ws2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	_ "github.com/gogf/gf/contrib/nosql/redis/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/redis/go-redis/v9"
@@ -76,7 +76,7 @@ func (c *chat) SubscribeMsgReq(ctx context.Context, req *v1.SubscribeMsgReq) (re
 	topicName := "testmodule.bagen.com.dweb_topic_112233"
 	xDWebHostDomain := gRequestData.Header.Get(consts.XDwebHostDomain)
 
-	pkg.CheckExistNetDomainInAclList(ctx, topicName, xDWebHostDomain)
+	pubsub2.CheckExistNetDomainInAclList(ctx, topicName, xDWebHostDomain)
 
 	ctxChild, cancel := context.WithCancel(context.Background())
 	clientId := gRequestData.Get("client_id").String()
