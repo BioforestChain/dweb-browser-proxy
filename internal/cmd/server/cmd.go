@@ -6,6 +6,7 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/app"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/net"
+	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/offline_msg"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/ping"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pre_user"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/controller/pubsub_permission"
@@ -31,6 +32,7 @@ var (
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(middleware.LimitHandler())
 				group.ALL("/*any", func(r *ghttp.Request) {
+					//TODO offline msg by post base on https
 					controller.Proxy.Forward(ctx, r, hub)
 				})
 			})
@@ -45,11 +47,11 @@ var (
 					group.Bind(
 						ping.New(),
 						pubsub_permission.New(),
+						offline_msg.New(),
 						//auth.New(),
 						pre_user.New(),
 						net.New(),
 						app.New(),
-						controller.NewChat(hub),
 					)
 				})
 

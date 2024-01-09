@@ -17,10 +17,13 @@ type RedisClient struct {
 var Ctx context.Context
 
 func InitRedis() {
+
 	instances, err := InitRedisPool("default")
+
 	if err == nil {
 		SetRedisInstance("default", instances)
 	}
+
 	//go closePool()
 }
 
@@ -62,5 +65,6 @@ func InitRedisPool(dbName string) ([]RedisInstance, error) {
 			Client: rds.Client,
 		}
 	}
+
 	return redisPools, nil
 }

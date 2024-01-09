@@ -95,6 +95,13 @@ func (c *Controller) AppModuleList(ctx context.Context, req *v1.ClientAppModuleL
 	condition.IsOnline = req.IsOnline
 
 	list, total, err := service.App().GetAppModuleList(ctx, condition)
+	if err != nil {
+		return
+	}
+	//if list == nil {
+	//	//list = []*v1.ClientAppModuleDetailRes{}
+	//	list = make([]*v1.ClientAppModuleDetailRes, 0)
+	//}
 	res = new(v1.ClientAppModuleListRes)
 	res.List = list
 	res.Total = total
