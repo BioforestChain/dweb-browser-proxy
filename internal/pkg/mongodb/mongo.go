@@ -12,23 +12,19 @@ import (
 	"time"
 )
 
+// mgo
+// @Description:
 type mgo struct {
-	//uri        string //数据库网络地址
 	database   string //要连接的数据库
 	collection string //要连接的集合
 }
 
-//func (m *mgo) Connect() *mongo.Collection {
-//	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-//	defer cancel() //养成良好的习惯，在调用WithTimeout之后defer cancel()
-//	client, err := mongo.Connect(ctx, options.Client().ApplyURI(m.uri))
-//	if err != nil {
-//		log.Print(err)
-//	}
-//	collection := client.Database(m.database).Collection(m.collection)
-//	return collection
-//}
-
+// NewMgo
+//
+//	@Description:
+//	@param database
+//	@param collection
+//	@return *mgo
 func NewMgo(database, collection string) *mgo {
 
 	return &mgo{
@@ -38,7 +34,13 @@ func NewMgo(database, collection string) *mgo {
 	}
 }
 
-// 查询单个
+// FindOne
+//
+//	@Description: 查询单个
+//	@receiver m
+//	@param key
+//	@param value
+//	@return *mongo.SingleResult
 func (m *mgo) FindOne(key string, value interface{}) *mongo.SingleResult {
 	client := DB.Mongo
 	collection, _ := client.Database(m.database).Collection(m.collection).Clone()
@@ -48,7 +50,12 @@ func (m *mgo) FindOne(key string, value interface{}) *mongo.SingleResult {
 	return singleResult
 }
 
-// 插入单个
+// InsertOne
+//
+//	@Description: 插入单个
+//	@receiver m
+//	@param value
+//	@return *mongo.InsertOneResult
 func (m *mgo) InsertOne(value interface{}) *mongo.InsertOneResult {
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)
@@ -59,7 +66,12 @@ func (m *mgo) InsertOne(value interface{}) *mongo.InsertOneResult {
 	return insertResult
 }
 
-// 查询集合里有多少数据
+// CollectionCount
+//
+//	@Description:  查询集合里有多少数据
+//	@receiver m
+//	@return string
+//	@return int64
 func (m *mgo) CollectionCount() (string, int64) {
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)
@@ -68,13 +80,21 @@ func (m *mgo) CollectionCount() (string, int64) {
 	return name, size
 }
 
-// 按选项查询集合 Skip 跳过 Limit 读取数量 sort 1 ，-1 . 1 为最初时间读取 ， -1 为最新时间读取
+// CollectionDocuments
+//
+//	@Description: filter := bson.D{{key,value}} 按选项查询集合 Skip 跳过 Limit 读取数量 sort 1 ，-1 . 1 为最初时间读取 ， -1 为最新时间读取
+//	@receiver m
+//	@param Filter
+//	@param Skip
+//	@param Limit
+//	@param sort
+//	@return cur
+//	@return err
 func (m *mgo) CollectionDocuments(Filter bson.M, Skip, Limit int64, sort int) (cur *mongo.Cursor, err error) {
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)
 
 	SORT := bson.D{{"_id", sort}}
-	//filter := bson.D{{key,value}}
 	findOptions := options.Find().SetSort(SORT).SetLimit(Limit).SetSkip(Skip)
 
 	//findOptions.SetLimit(i)
@@ -86,7 +106,13 @@ func (m *mgo) CollectionDocuments(Filter bson.M, Skip, Limit int64, sort int) (c
 	return temp, nil
 }
 
-// 获取集合创建时间和编号
+// ParsingId
+//
+//	@Description: 获取集合创建时间和编号
+//	@receiver m
+//	@param result
+//	@return time.Time
+//	@return uint64
 func (m *mgo) ParsingId(result string) (time.Time, uint64) {
 	temp1 := result[:8]
 	timestamp, _ := strconv.ParseInt(temp1, 16, 64)
@@ -96,7 +122,14 @@ func (m *mgo) ParsingId(result string) (time.Time, uint64) {
 	return dateTime, count
 }
 
-// 删除文章和查询文章
+// DeleteAndFind
+//
+//	@Description: 删除doc和查询doc
+//	@receiver m
+//	@param key
+//	@param value
+//	@return int64
+//	@return *mongo.SingleResult
 func (m *mgo) DeleteAndFind(key string, value interface{}) (int64, *mongo.SingleResult) {
 	client := DB.Mongo
 
@@ -110,7 +143,13 @@ func (m *mgo) DeleteAndFind(key string, value interface{}) (int64, *mongo.Single
 	return DeleteResult.DeletedCount, singleResult
 }
 
-// 删除文章
+// Delete
+//
+//	@Description: 删除doc
+//	@receiver m
+//	@param key
+//	@param value
+//	@return int64
 func (m *mgo) Delete(key string, value interface{}) int64 {
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)
@@ -123,7 +162,13 @@ func (m *mgo) Delete(key string, value interface{}) int64 {
 
 }
 
-// 删除多个
+// DeleteMany
+//
+//	@Description: 删除多个
+//	@receiver m
+//	@param key
+//	@param value
+//	@return int64
 func (m *mgo) DeleteMany(key string, value interface{}) int64 {
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)

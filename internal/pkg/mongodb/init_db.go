@@ -15,17 +15,21 @@ type Database struct {
 
 var DB *Database
 
-// 初始化
+// Init
+//
+//	@Description: 初始化
 func Init() {
 	DB = &Database{
 		Mongo: SetConnect(),
 	}
 }
 
-// 连接设置
-// uri := "mongodb://localhost:27017"
+// SetConnect 设置客户端连接配置
+//
+//	@Description: uri := "mongodb://localhost:27017"
+//
+// @return *mongo.Client
 func SetConnect() *mongo.Client {
-	// 设置客户端连接配置
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	uriInit, _ := g.Cfg().Get(ctx, "database.mongodb.link")
 	uri := uriInit.String()
