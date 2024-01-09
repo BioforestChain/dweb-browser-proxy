@@ -73,12 +73,12 @@ func (m *mgo) CollectionDocuments(Filter bson.M, Skip, Limit int64, sort int) (c
 	client := DB.Mongo
 	collection := client.Database(m.database).Collection(m.collection)
 
-	SORT := bson.D{{"_id", sort}} //filter := bson.D{{key,value}}
-	filter := bson.D{{}}
+	SORT := bson.D{{"_id", sort}}
+	//filter := bson.D{{key,value}}
 	findOptions := options.Find().SetSort(SORT).SetLimit(Limit).SetSkip(Skip)
 
 	//findOptions.SetLimit(i)
-	temp, err := collection.Find(context.Background(), filter, findOptions)
+	temp, err := collection.Find(context.Background(), Filter, findOptions)
 	if err != nil {
 		log.Println("CollectionDocuments collection.Find err is", err)
 		return nil, err
