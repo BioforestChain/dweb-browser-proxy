@@ -5,7 +5,7 @@
 package dao
 
 import (
-	"github.com/BioforestChain/dweb-browser-proxy/internal/dao/internal"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/dao/internal"
 )
 
 // internalPubsubUserAclDao is internal type for wrapping internal DAO implements.

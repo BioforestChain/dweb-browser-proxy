@@ -8,7 +8,7 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model/entity"
 	error2 "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/error"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/middleware"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/middleware"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/golang-jwt/jwt/v4"

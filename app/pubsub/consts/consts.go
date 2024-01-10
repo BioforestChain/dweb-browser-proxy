@@ -1,37 +1,7 @@
 package consts
 
-import "time"
-
 const RedisPrefix = "proxy_net:"
 const FormatKey = "%s%s"
-
-// paging
-const InitLimit = 10
-const InitPage = 1
-
-// prefixBroadcastAddress len
-// 合法
-const MinLenLimitLegality = 7
-const MinLenLimit = "6"
-
-const (
-	OpenAPITitle       = `GoFrame Demos`
-	OpenAPIDescription = `This is a simple demos HTTP server project that is using GoFrame. Enjoy 💖 `
-)
-
-const (
-	DefaultDateTime      = "1970-01-01 00:00:00"
-	DefaultDateFormatEn  = "02/01/2006 15:04"
-	DefaultDateFormatMin = "2006-01-02 15:04"
-)
-
-const (
-	JwtSecret                = "8ab6c8dee22768da1503351069f032cb" // jwt密匙
-	CtxUserIDKey             = "userID"
-	CtxUserIdentificationKey = "userIdentification"
-	Issuer                   = "jwt"
-	JwtTTLTimeUnit           = time.Hour
-)
 
 const (
 	XDwebHostMMID   = "X-Dweb-Host"

@@ -65,21 +65,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	if client == nil {
 		return nil, errors.New("the service is unavailable~")
 	}
-	var (
-		clientIpc     = client.GetIpc()
-		overallHeader = make(map[string]string)
-	)
-	for k, v := range req.Header {
-		overallHeader[k] = v[0]
-	}
-	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
-		Method: req.Method,
-		Header: overallHeader,
-		Body:   req.Body,
-	})
-	resIpc, err := clientIpc.Send(ctx, reqIpc)
-	if err != nil {
-		return nil, err
-	}
-	return resIpc, nil
+
+	return ws.SendIPC(ctx, client, req)
 }

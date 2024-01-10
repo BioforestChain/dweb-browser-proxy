@@ -3,11 +3,11 @@ package pubsub_permission
 import (
 	"context"
 	"fmt"
-	v1 "github.com/BioforestChain/dweb-browser-proxy/api/pubsub_permission/v1"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/middleware"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/pubsub_permission/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/consts"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/service"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/middleware"
 	"github.com/gogf/gf/v2/frame/g"
 )
 

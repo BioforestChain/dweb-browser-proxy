@@ -3,7 +3,7 @@ package pubsub_permission
 import (
 	"context"
 	"database/sql"
-	v1 "github.com/BioforestChain/dweb-browser-proxy/api/pubsub_permission/v1"
+	v1 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/pubsub_permission/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model/do"

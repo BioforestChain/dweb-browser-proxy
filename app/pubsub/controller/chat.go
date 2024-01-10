@@ -2,23 +2,24 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	v1 "github.com/BioforestChain/dweb-browser-proxy/api/chat/v1"
 	v1Client "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
 	pubsub2 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/chat/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/consts"
 	redisHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/redis"
-	ws2 "github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	_ "github.com/gogf/gf/contrib/nosql/redis/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/redis/go-redis/v9"
 )
 
 type chat struct {
-	hub *ws2.Hub
+	hub *ws.Hub
 }
 
-func NewChat(hub *ws2.Hub) *chat {
+func NewChat(hub *ws.Hub) *chat {
 	return &chat{
 		hub: hub,
 	}
@@ -105,10 +106,16 @@ func (c *chat) SubscribeMsgReq(ctx context.Context, req *v1.SubscribeMsgReq) (re
 			reqC.Body = gRequestData.GetBody()
 			reqC.ClientID = clientId
 			reqC.Body = data.Payload
-			_, err = Proxy2Ipc(ctxChild, c.hub, reqC)
+
+			client := c.hub.GetClient(clientId)
+			if client == nil {
+				return errors.New("the service is unavailable~")
+			}
+			_, err = ws.SendIPC(ctxChild, client, reqC)
 			fmt.Println("ctxSrcRelease Proxy2Ipc", err)
 			return err
 		}, req.TopicName)
+
 		if err != nil {
 			fmt.Println("ctxSrcRelease Validator", err)
 			//return

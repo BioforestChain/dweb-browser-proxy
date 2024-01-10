@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/BioforestChain/dweb-browser-proxy/internal/cmd/server"
+	_ "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/logic"
+	"github.com/BioforestChain/dweb-browser-proxy/cmd/server"
 	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/redis"
 
