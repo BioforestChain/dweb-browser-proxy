@@ -8,5 +8,4 @@ import (
 	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/app"
 	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/auth"
 	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/net"
-	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic/offline_msg"
 )

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	pubsub2 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/logic/net"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
@@ -89,19 +88,9 @@ func (wst *webSocket) Connect(hub *ws.Hub, w http.ResponseWriter, r *http.Reques
 		request := data.(*ipc.Request)
 
 		if len(request.Header.Get("X-Dweb-Pubsub")) > 0 {
-			if err := pubsub2.DefaultPubSub.Handler(context.Background(), request, client); err != nil {
-				// TODO
-				log.Println("handlerPubSub err: ", err)
-
-				body := []byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, err.Error()))
-				err = clientIPC.PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
-				fmt.Println("PostMessage err: ", err)
-				return
+			if err = pubsub2.ProcessPubSub(context.Background(), client, request, ipcObj); err != nil {
+				log.Println("ProcessPubSub err: ", err)
 			}
-
-			body := []byte(fmt.Sprint(`{"success": true, "message": "ok"}`))
-			err = clientIPC.PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
-			fmt.Println("PostMessage err: ", err)
 		}
 	})
 }

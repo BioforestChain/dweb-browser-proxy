@@ -15,40 +15,26 @@ import (
 	"github.com/redis/go-redis/v9"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"sync"
 )
 
-type Cache struct {
-	Ctx      context.Context
-	RedisCli *redisHelper.RedisInstance
-}
+func ProcessPubSub(ctx context.Context, client *ws.Client, request *ipc.Request, ipcObj ipc.IPC) (err error) {
+	if err = DefaultPubSub.Handler(ctx, request, client); err != nil {
+		var er = err
+		body := []byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, err.Error()))
+		err = client.GetIpc().PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
+		if err != nil {
+			er = err
+		}
 
-func NewCache(ctx context.Context) *Cache {
-	redisCli, _ := redisHelper.GetRedisInstance("default")
-	return &Cache{Ctx: ctx, RedisCli: redisCli}
-}
+		return er
+	}
 
-type IpcBodyData struct {
-	Topic string `json:"topic"`
-	Data  string `json:"data"`
-}
-type IpcHeaderData struct {
-	XDwebHostMMID string `json:"X-Dweb-Host"` // X-Dweb-Pubsub
-	//XDWebPubSub       string `json:"X-Dweb-Pubsub"`
-	XDWebPubSubApp string `json:"X-Dweb-Pubsub-App"`
-	//XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
-	//XDWebPubSubDomain string `json:"X-Dweb-Pubsub-Net-Domain"`
-}
-
-// IpcEvent.data
-type IpcEventDataHeaderBody struct {
-	Headers IpcHeaderData `json:"headers"`
-	Body    IpcBodyData   `json:"body"`
-}
-
-func getCacheKey(keyName string) string {
-	return fmt.Sprintf(consts.FormatKey, consts.RedisPrefix, keyName)
+	body := []byte(fmt.Sprint(`{"success": true, "message": "ok"}`))
+	err = client.GetIpc().PostMessage(context.Background(), ipc.FromResponseBinary(request.ID, http.StatusOK, ipc.NewHeader(), body, ipcObj))
+	return
 }
 
 var DefaultPubSub = NewPubSub()
@@ -308,4 +294,36 @@ func CheckExistNetDomainInAclList(ctx context.Context, topicName, xDWebHostDomai
 		return false, err
 	}
 	return pubSubUserAclId.Int() > 0, nil
+}
+
+type Cache struct {
+	Ctx      context.Context
+	RedisCli *redisHelper.RedisInstance
+}
+
+func NewCache(ctx context.Context) *Cache {
+	redisCli, _ := redisHelper.GetRedisInstance("default")
+	return &Cache{Ctx: ctx, RedisCli: redisCli}
+}
+
+type IpcBodyData struct {
+	Topic string `json:"topic"`
+	Data  string `json:"data"`
+}
+type IpcHeaderData struct {
+	XDwebHostMMID string `json:"X-Dweb-Host"` // X-Dweb-Pubsub
+	//XDWebPubSub       string `json:"X-Dweb-Pubsub"`
+	XDWebPubSubApp string `json:"X-Dweb-Pubsub-App"`
+	//XDWebPubSubNet    string `json:"X-Dweb-Pubsub-Net"`
+	//XDWebPubSubDomain string `json:"X-Dweb-Pubsub-Net-Domain"`
+}
+
+// IpcEvent.data
+type IpcEventDataHeaderBody struct {
+	Headers IpcHeaderData `json:"headers"`
+	Body    IpcBodyData   `json:"body"`
+}
+
+func getCacheKey(keyName string) string {
+	return fmt.Sprintf(consts.FormatKey, consts.RedisPrefix, keyName)
 }

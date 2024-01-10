@@ -3,11 +3,11 @@ package pubsub_permission
 import (
 	"context"
 	"database/sql"
-	v1 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/pubsub_permission/v1"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/pubsub_permission/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model/do"
-	entitis "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model/entity"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model/entity"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/service"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/util/strings"
 	"github.com/gogf/gf/v2/container/gvar"
@@ -34,13 +34,13 @@ func New() service.IPubsubPermission {
 //	@param in
 //	@return entity
 //	@return err
-func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model.PubsubPermissionCreateInput) (entity *v1.PubsubPermissionDetailRes, err error) {
+func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model.PubsubPermissionCreateInput) (res *v1.PubsubPermissionDetailRes, err error) {
 	var (
 		getPriKey         int64
 		result            sql.Result
 		queryPid          *gvar.Var
 		idSlice           g.Slice
-		pubsubUserAclList []*entitis.PubsubUserAcl
+		pubsubUserAclList []*entity.PubsubUserAcl
 		//getPubsubUserAclList gdb.Result
 		//getPubsubUserAclList interface{}
 	)
@@ -103,13 +103,13 @@ func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model
 		return nil
 	})
 	// result PubsubPermissionDetailRes
-	entity = new(v1.PubsubPermissionDetailRes)
-	entity.Id = int(getPriKey)
-	entity.Topic = in.Topic
-	entity.Type = in.Type
-	entity.Publisher = in.XDwebHostMMID
-	entity.List = pubsubUserAclList
-	return entity, nil
+	res = new(v1.PubsubPermissionDetailRes)
+	res.Id = int(getPriKey)
+	res.Topic = in.Topic
+	res.Type = in.Type
+	res.Publisher = in.XDwebHostMMID
+	res.List = pubsubUserAclList
+	return res, nil
 }
 
 func (s *sPubsubPermission) IsPubsubPermissionTopicNameExist(ctx context.Context, Topic string) (bool, error) {
