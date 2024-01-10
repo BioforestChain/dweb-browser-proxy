@@ -10,7 +10,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	stringsHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/strings"
+	stringsHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/strings"
 	"log"
 )
 

@@ -9,13 +9,15 @@
 */
 package model
 
-import "github.com/BioforestChain/dweb-browser-proxy/internal/dao"
+import (
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/model"
+)
 
 // UserAppInfoCreateInput
 // @Description: Domain,AppInfo
 
 type UserQueryInput struct {
-	dao.PaginationSearch
+	model.PaginationSearch
 	Id     uint32
 	Domain string
 	Name   string

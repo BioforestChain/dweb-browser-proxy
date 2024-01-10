@@ -1,6 +1,6 @@
 module github.com/BioforestChain/dweb-browser-proxy
 
-go 1.20
+go 1.21
 
 require (
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.5.2

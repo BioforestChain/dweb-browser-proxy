@@ -6,8 +6,8 @@ import (
 	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/page"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/page"
 	"github.com/gogf/gf/v2/frame/g"
 )
 

@@ -3,12 +3,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	pubsub2 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/logic/net"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/rsa"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gorilla/websocket"
 	"log"
@@ -89,7 +89,7 @@ func (wst *webSocket) Connect(hub *ws.Hub, w http.ResponseWriter, r *http.Reques
 		request := data.(*ipc.Request)
 
 		if len(request.Header.Get("X-Dweb-Pubsub")) > 0 {
-			if err := pkg.DefaultPubSub.Handler(context.Background(), request, client); err != nil {
+			if err := pubsub2.DefaultPubSub.Handler(context.Background(), request, client); err != nil {
 				// TODO
 				log.Println("handlerPubSub err: ", err)
 

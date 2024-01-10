@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model/do"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/model"
 	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -62,7 +62,7 @@ type ClientNetModuleListReq struct {
 	Domain   string `json:"domain"`
 	NetId    string `json:"net_id"`
 	IsOnline uint32 `json:""`
-	dao.PaginationSearch
+	model.PaginationSearch
 }
 
 type ClientNetModuleListRes struct {
@@ -127,7 +127,7 @@ type ClientAppModuleListReq struct {
 	AppName   string `json:"app_name"   in:"query" dc:"app模块名"`
 	IsInstall uint32 `json:"is_install"   in:"query" dc:"是否安装"`
 	IsOnline  uint32 `json:"is_online"   in:"query" dc:"是否在线"`
-	dao.PaginationSearch
+	model.PaginationSearch
 }
 
 type ClientAppModuleDetailRes struct {
@@ -167,7 +167,7 @@ type ClientListQueryReq struct {
 	g.Meta         `path:"/user/client-list" tags:"ClientListQueryService" method:"get" summary:"Query client list"`
 	Domain         string
 	Identification string
-	dao.PaginationSearch
+	model.PaginationSearch
 }
 
 // ClientQueryRes

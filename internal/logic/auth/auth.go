@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/api/client/v1"
-	timeHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/time"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/service"
+	timeHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/time"
 	"github.com/gogf/gf/v2/frame/g"
 	"time"
 )

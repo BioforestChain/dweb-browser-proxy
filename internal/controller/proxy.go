@@ -10,11 +10,11 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/internal/consts"
 	error2 "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/error"
 	helperIPC "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ipc"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/mongodb"
-	stringsHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/strings"
-	timeHelper "github.com/BioforestChain/dweb-browser-proxy/internal/pkg/util/time"
-	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/ws"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ipc"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/mongodb"
+	stringsHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/strings"
+	timeHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/time"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"go.mongodb.org/mongo-driver/bson"
@@ -375,21 +375,6 @@ func Proxy2Ipc(ctx context.Context, hub *ws.Hub, req *v1.IpcReq) (res *ipc.Respo
 	if client == nil {
 		return nil, errors.New("the service is unavailable~")
 	}
-	var (
-		clientIpc     = client.GetIpc()
-		overallHeader = make(map[string]string)
-	)
-	for k, v := range req.Header {
-		overallHeader[k] = v[0]
-	}
-	reqIpc := clientIpc.Request(req.URL, ipc.RequestArgs{
-		Method: req.Method,
-		Header: overallHeader,
-		Body:   req.Body,
-	})
-	resIpc, err := clientIpc.Send(ctx, reqIpc)
-	if err != nil {
-		return nil, err
-	}
-	return resIpc, nil
+
+	return ws.SendIPC(ctx, client, req)
 }

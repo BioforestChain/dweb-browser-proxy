@@ -10,7 +10,7 @@
 package model
 
 import (
-	"github.com/BioforestChain/dweb-browser-proxy/internal/dao"
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/model"
 )
 
 type NetModuleCreateInput struct {
@@ -31,7 +31,7 @@ type NetModulePublicKeyInput struct {
 	BroadcastAddress string
 }
 type NetModuleListQueryInput struct {
-	dao.PaginationSearch
+	model.PaginationSearch
 	Domain   string `json:"domain"   in:"query" dc:"域名"`
 	NetId    string `json:"net_id"   in:"query" dc:"网络模块id"`
 	IsOnline uint32 `json:"is_online"   in:"query" dc:"是否上线"`

@@ -1,6 +1,8 @@
 package model
 
-import "github.com/BioforestChain/dweb-browser-proxy/internal/dao"
+import (
+	"github.com/BioforestChain/dweb-browser-proxy/pkg/model"
+)
 
 type AppModuleCreateInput struct {
 	NetId    string
@@ -24,7 +26,7 @@ type AppModuleInfoCreateInput struct {
 }
 
 type AppModuleListQueryInput struct {
-	dao.PaginationSearch
+	model.PaginationSearch
 	UserName  string `json:"user_name"   in:"query" dc:"用户名"`
 	NetId     string `json:"net_id"   in:"query" dc:"网络模块id"`
 	AppId     string `json:"app_id"   in:"query" dc:"app模块id"`
