@@ -2,7 +2,7 @@ package controller
 
 import (
 	"context"
-	pubsub2 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
+	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/logic/net"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/model"
 	"github.com/BioforestChain/dweb-browser-proxy/internal/pkg/rsa"
@@ -88,7 +88,7 @@ func (wst *webSocket) Connect(hub *ws.Hub, w http.ResponseWriter, r *http.Reques
 		request := data.(*ipc.Request)
 
 		if len(request.Header.Get("X-Dweb-Pubsub")) > 0 {
-			if err = pubsub2.ProcessPubSub(context.Background(), client, request, ipcObj); err != nil {
+			if err = pubsub.ProcessPubSub(context.Background(), client, request, ipcObj); err != nil {
 				log.Println("ProcessPubSub err: ", err)
 			}
 		}
