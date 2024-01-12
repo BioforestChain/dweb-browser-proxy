@@ -12,6 +12,7 @@ import (
 	timeHelper "github.com/BioforestChain/dweb-browser-proxy/pkg/util/time"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/ws"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/glog"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,6 +20,23 @@ import (
 	"strings"
 	"time"
 )
+
+type LoggerIns struct {
+	NewIns *glog.Logger
+}
+
+var logger *LoggerIns
+
+func init() {
+	logger = &LoggerIns{
+		NewIns: NewPath(),
+	}
+}
+
+func NewPath() *glog.Logger {
+	logPath, _ := g.Cfg().Get(context.Background(), "logger.pathOfflineMsg") //
+	return glog.New().Path(logPath.String())
+}
 
 type OfflineMsgData struct {
 	C  interface{}
@@ -46,25 +64,31 @@ type paramsCheckQuota struct {
 	receiver             []string
 }
 
+// ProcessOfflineStorage
+//
+//	@Description:
+//	@param ctx
+//	@param req //req.ClientID : "a.b.com,b.b.com,c.b.com"
+//	@param hub
+//	@return error
 func ProcessOfflineStorage(ctx context.Context, req *clientV1.IpcReq, hub *ws.Hub) error {
 	content := req.Body
-	//req.ClientID : "a.b.com,b.b.com,c.b.com"
 	clientStr := req.ClientID
 	clientArrList := stringsHelper.Explode(",", clientStr)
-
-	appId := req.Header[consts.XDwebHostMMID][0]
-	//colNameSrc, _ := g.Cfg().Get(ctx, "offlineMsgDb.colName")
+	//模块 appId 为表名
 	//colName = colNameSrc.String()
-	//dbName := "local"
+	//colNameSrc, _ := g.Cfg().Get(ctx, "offlineMsgDb.colName")
+	colNameAppId := req.Header[consts.XDwebHostMMID][0]
 	dbNameSrc, _ := g.Cfg().Get(ctx, "offlineMsgDb.dbName")
 	dbName := dbNameSrc.String()
-	quotaColName := consts.QuotaCollectioPrefix + appId
+	quotaColName := consts.QuotaCollectioPrefix + colNameAppId
 	presetCollectionSize, _ := g.Cfg().Get(context.Background(), "presetCollectionSize.quotaSize")
 	quotaSizeByColName, _ := GetCollectionQuotaByAppId(dbName, quotaColName, presetCollectionSize.Uint32())
-	storageSize, _ := GetCollectionStorageSizeByAppId(dbName, appId)
+	storageSize, _ := GetCollectionStorageSizeByAppId(dbName, colNameAppId)
 	contentSize, err := getBodySize(content)
 	if err != nil {
-		log.Println("mongo.Connect panic is : ", err)
+		logger.NewIns.Error(ctx, "getBodySize (req.Body) err : ", err, "status", 500)
+		//log.Println("mongo.Connect panic is : ", err)
 	}
 	// 离线状态的 接收者
 	receiverList := []string{}
@@ -77,10 +101,8 @@ func ProcessOfflineStorage(ctx context.Context, req *clientV1.IpcReq, hub *ws.Hu
 			receiverList = append(receiverList, clientId)
 		} else {
 			if _, err := ws.SendIPC(ctx, client, req); err != nil {
-				log.Println("clientIpc.Send panic is", err)
-				//return nil, err
+				logger.NewIns.Error(ctx, "clientIpc.Send err : ", err, "status", 500)
 			}
-			//return resIpc, nil
 		}
 	}
 
@@ -90,7 +112,7 @@ func ProcessOfflineStorage(ctx context.Context, req *clientV1.IpcReq, hub *ws.Hu
 		quotaSizeByColName,
 		presetCollectionSize.Uint32(),
 		dbName,
-		appId,
+		colNameAppId,
 		content,
 		contentSize,
 		receiverList,
@@ -120,13 +142,14 @@ func QuotaIsFull(req paramsCheckQuota) (err error) {
 	// 检查连接
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
-		log.Println("ping panic is ", err)
+		logger.NewIns.Error(context.Background(), "clientIpc.Ping err : ", err, "status", 500)
+		//log.Println("ping panic is ", err)
 	}
 	fmt.Println("Connected to MongoDB!")
 	defer func() {
 		// 断开连接
 		if err = client.Disconnect(context.Background()); err != nil {
-			panic(err)
+			logger.NewIns.Error(context.Background(), "clientIpc.Disconnect err : ", err, "status", 500)
 		}
 		fmt.Println("Connection to MongoDB closed.")
 	}()
@@ -151,11 +174,13 @@ func QuotaIsFull(req paramsCheckQuota) (err error) {
 	bsonOne := OfflineMsgData{req.content, req.receiver, nowTime}
 	res, err := offlineMsgCol.InsertOne(context.Background(), bsonOne)
 	if err != nil {
-		log.Println(req.colName+" Insert offlineMsgCol panic: ", err)
+		logger.NewIns.Error(context.Background(), req.colName+" Insert offlineMsgCol err : ", err, "status", 500)
+		//log.Println(req.colName+" Insert offlineMsgCol panic: ", err)
 	}
 	insertedID, ok := res.InsertedID.(primitive.ObjectID)
 	if !ok {
-		log.Println("InsertedID is not a primitive.ObjectID")
+		logger.NewIns.Error(context.Background(), req.colName+" InsertedID is not a primitive.ObjectID err : ", "status", 500)
+		//log.Println("InsertedID is not a primitive.ObjectID")
 	}
 	// Get the hexadecimal representation of the ObjectID
 	hexID := insertedID.Hex()
@@ -172,10 +197,10 @@ func QuotaIsFull(req paramsCheckQuota) (err error) {
 		filter := bson.M{}
 		_, err = quotaCol.UpdateOne(context.Background(), filter, update)
 		if err != nil {
-			log.Println(quotaColName+" update quota panic is ", err)
+			logger.NewIns.Error(context.Background(), quotaColName+" update quota err : ", err, "status", 500)
+			//log.Println(quotaColName+" update quota panic is ", err)
 		}
 	}
-	fmt.Printf("InsertOne id's hexID is : %#v\n", hexID)
 	return nil
 }
 
@@ -193,11 +218,11 @@ func GetCollectionStorageSizeByAppId(dbName, colName string) (storageSize uint32
 	statsResult := client.Database(dbName).RunCommand(context.Background(), bson.D{{"collStats", colName}})
 	var result map[string]interface{}
 	if err := statsResult.Decode(&result); err != nil {
-		log.Println(colName+" statsResult panic is", err)
+		logger.NewIns.Error(context.Background(), colName+" statsResult err : ", err, "status", 500)
 	}
 	storageSizeInt32, ok := result["storageSize"].(int32)
 	if !ok {
-		log.Println("storageSize not found or not a int32")
+		logger.NewIns.Error(context.Background(), colName+" storageSize not found or not a int32 ", "status", 500)
 	}
 	storageSize = uint32(storageSizeInt32)
 	return storageSize, nil
@@ -246,13 +271,13 @@ func GetCollectionQuotaByAppId(dbName, colName string, presetCollectionSize uint
 	client := mongodb.DB.Mongo
 	exists, err := collectionExists(client, dbName, colName)
 	if err != nil {
-		log.Println(colName+" insert data panic is ", err)
+		logger.NewIns.Error(context.Background(), colName+" insert data err : ", err, "status", 500)
 	}
 	collection := client.Database(dbName).Collection(colName)
 	if exists {
 		var result QuotaCollection
 		if err := collection.FindOne(context.Background(), bson.D{}).Decode(&result); err != nil {
-			log.Println("found document panic", err)
+			logger.NewIns.Error(context.Background(), colName+" found document err : ", err, "status", 500)
 		}
 		log.Println("found document ", result)
 		return result.Quota, nil
@@ -262,7 +287,7 @@ func GetCollectionQuotaByAppId(dbName, colName string, presetCollectionSize uint
 		}
 		_, err = collection.InsertOne(context.Background(), inData)
 		if err != nil {
-			log.Println(colName+" insert data panic is ", err)
+			logger.NewIns.Error(context.Background(), colName+" insert data err : ", err, "status", 500)
 		}
 		return presetCollectionSize, nil
 	}

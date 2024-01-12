@@ -48,8 +48,3 @@ const (
 	//table pre
 	QuotaCollectioPrefix = "quota_"
 )
-
-type User struct {
-	UserID uint32 `json:"user_id"`
-	Token  string
-}
