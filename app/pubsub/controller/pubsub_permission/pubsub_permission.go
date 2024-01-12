@@ -2,6 +2,7 @@ package pubsub_permission
 
 import (
 	"context"
+	"fmt"
 	v1 "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/api/pubsub_permission/v1"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/consts"
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/model"
@@ -53,9 +54,8 @@ func (c *Controller) Ping(ctx context.Context, req *v1.Req) (res *v1.Res, err er
 //	@return res
 //	@return err
 func (c *Controller) Reg(ctx context.Context, req *v1.RegReq) (res *v1.PubsubPermissionDetailRes, err error) {
-
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
-		logger.NewIns.Error(ctx, " NetModuleReg Validator err: ", err, "status", 400)
+		fmt.Println("NetModuleReg Validator", err)
 		return nil, err
 	}
 
@@ -66,5 +66,9 @@ func (c *Controller) Reg(ctx context.Context, req *v1.RegReq) (res *v1.PubsubPer
 		NetDomainNames: req.NetDomainNames,
 		XDwebHostMMID:  g.RequestFromCtx(ctx).Header.Get(consts.XDwebHostMMID),
 	})
+	if err != nil {
+		logger.NewIns.Error(ctx, " PubsubPermission CreatePubsubPermission err: ", err, "status", 500)
+	}
+
 	return
 }
