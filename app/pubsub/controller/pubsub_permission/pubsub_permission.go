@@ -9,12 +9,35 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/app/pubsub/service"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/middleware"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/glog"
 )
 
 type Controller struct{}
 
 func New() *Controller {
+	InitLogger()
 	return &Controller{}
+}
+
+type LoggerIns struct {
+	NewIns *glog.Logger
+}
+
+var logger *LoggerIns
+
+// Init
+//
+//	@Description: 初始化
+func InitLogger() {
+	logger = &LoggerIns{
+		NewIns: NewPath(),
+	}
+}
+
+func NewPath() *glog.Logger {
+	logPathPubSub, _ := g.Cfg().Get(context.Background(), "logger.pathPubSub")
+	logIns := glog.New().Path(logPathPubSub.String())
+	return logIns
 }
 
 func (c *Controller) Ping(ctx context.Context, req *v1.Req) (res *v1.Res, err error) {
@@ -31,7 +54,6 @@ func (c *Controller) Ping(ctx context.Context, req *v1.Req) (res *v1.Res, err er
 //	@return res
 //	@return err
 func (c *Controller) Reg(ctx context.Context, req *v1.RegReq) (res *v1.PubsubPermissionDetailRes, err error) {
-
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("NetModuleReg Validator", err)
 		return nil, err
@@ -44,5 +66,9 @@ func (c *Controller) Reg(ctx context.Context, req *v1.RegReq) (res *v1.PubsubPer
 		NetDomainNames: req.NetDomainNames,
 		XDwebHostMMID:  g.RequestFromCtx(ctx).Header.Get(consts.XDwebHostMMID),
 	})
+	if err != nil {
+		logger.NewIns.Error(ctx, " PubsubPermission CreatePubsubPermission err: ", err, "status", 500)
+	}
+
 	return
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "github.com/BioforestChain/dweb-browser-proxy/app/offline_storage/logic"
 	_ "github.com/BioforestChain/dweb-browser-proxy/app/pubsub/logic"
 	"github.com/BioforestChain/dweb-browser-proxy/cmd/server"
 	_ "github.com/BioforestChain/dweb-browser-proxy/internal/logic"

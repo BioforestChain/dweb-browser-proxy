@@ -8,13 +8,33 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/app/offline_storage/service"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/page"
 	"github.com/gogf/gf/v2/frame/g"
-	"time"
+	"github.com/gogf/gf/v2/os/glog"
 )
 
 type Controller struct{}
 
 func New() *Controller {
 	return &Controller{}
+}
+
+type LoggerIns struct {
+	NewIns *glog.Logger
+}
+
+var logger *LoggerIns
+
+// Init
+//
+//	@Description: 初始化
+func init() {
+	logger = &LoggerIns{
+		NewIns: NewPath(),
+	}
+}
+
+func NewPath() *glog.Logger {
+	logPath, _ := g.Cfg().Get(context.Background(), "logger.pathOfflineMsg") //
+	return glog.New().Path(logPath.String())
 }
 
 // OfflineMsgList
@@ -26,7 +46,6 @@ func New() *Controller {
 //	@return res
 //	@return err
 func (c *Controller) OfflineMsgList(ctx context.Context, req *v1.Req) (res *v1.OfflineMsgListRes, err error) {
-	start := time.Now()
 	if err := g.Validator().Data(req).Run(ctx); err != nil {
 		fmt.Println("OfflineMsgList Validator", err)
 	}
@@ -40,12 +59,8 @@ func (c *Controller) OfflineMsgList(ctx context.Context, req *v1.Req) (res *v1.O
 	condition.DbName = dbName.String()
 
 	list, total, err := service.OfflineMsg().GetOfflineMsgList(ctx, condition)
-
-	end := time.Now()
-	interval := end.Sub(start)
-	fmt.Println("Collection FindOne 程序执行间隔时间:", interval)
-
 	if err != nil {
+		logger.NewIns.Error(ctx, "OfflineMsgList err: ", err, "status", 500)
 		return
 	}
 	res = new(v1.OfflineMsgListRes)

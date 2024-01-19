@@ -12,8 +12,3 @@ const (
 	// 权限类型: 0:无认证，1:acl，2:基于密码，3:基于角色，4:etc
 	PubsubPermissionTypeAcl = 1 //
 )
-
-type User struct {
-	UserID uint32 `json:"user_id"`
-	Token  string
-}

@@ -6,9 +6,10 @@ import (
 	"github.com/BioforestChain/dweb-browser-proxy/app/offline_storage/model"
 	"github.com/BioforestChain/dweb-browser-proxy/app/offline_storage/service"
 	"github.com/BioforestChain/dweb-browser-proxy/pkg/mongodb"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/glog"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 )
 
 type (
@@ -17,9 +18,23 @@ type (
 
 func init() {
 	service.RegisterOfflineMsg(New())
+	logger = &LoggerIns{
+		NewIns: NewPath(),
+	}
 }
 func New() service.IOfflineMsg {
 	return &sOfflineMsg{}
+}
+
+type LoggerIns struct {
+	NewIns *glog.Logger
+}
+
+var logger *LoggerIns
+
+func NewPath() *glog.Logger {
+	logPath, _ := g.Cfg().Get(context.Background(), "logger.pathOfflineMsg") //
+	return glog.New().Path(logPath.String())
 }
 
 // DelOfflineMsgById
@@ -52,9 +67,8 @@ func (s *sOfflineMsg) GetOfflineMsgList(ctx context.Context, in model.OfflineMsg
 
 	filter := bson.M{"rs": clientID}
 	cur, err := mongodb.NewMgo(dbName, colName).CollectionDocuments(filter, int64(in.Offset), int64(in.Limit), -1)
-
 	if err != nil {
-		log.Println(err)
+		logger.NewIns.Error(ctx, "CollectionDocuments err: ", err, "status", 500)
 	}
 	defer cur.Close(context.Background())
 	for cur.Next(context.Background()) {
@@ -62,15 +76,14 @@ func (s *sOfflineMsg) GetOfflineMsgList(ctx context.Context, in model.OfflineMsg
 		var result v1.Res
 		err := cur.Decode(&result)
 		if err != nil {
-			log.Println("CollectionDocuments cur Decode err is ", err)
+			logger.NewIns.Error(ctx, "CollectionDocuments cur Decode err: ", err, "status", 500)
 		}
 		results = append(results, &result)
 	}
 	if err := cur.Err(); err != nil {
-		log.Println(err)
-		log.Println("CollectionDocuments cur err is ", err)
+		logger.NewIns.Error(ctx, "CollectionDocuments cur err: ", err, "status", 500)
 	}
 	// 完成后关闭游标
 	cur.Close(context.Background())
-	return results, len(results), err
+	return results, len(results), nil
 }
