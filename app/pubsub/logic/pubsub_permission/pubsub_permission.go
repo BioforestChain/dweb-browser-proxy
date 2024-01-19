@@ -45,32 +45,32 @@ func (s *sPubsubPermission) CreatePubsubPermission(ctx context.Context, in model
 		//getPubsubUserAclList interface{}
 	)
 
-	// query
-	if queryPid, err = dao.PubsubPermission.Ctx(ctx).Fields("id").Where(g.Map{
-		"topic =":     in.Topic,
-		"publisher =": in.XDwebHostMMID,
-		"type =":      in.Type,
-	}).Value(); err != nil {
-		return nil, err
-	}
-	// update.
-	if queryPid.Int() > 0 {
-		//del Permission
-		if result, err = dao.PubsubPermission.Ctx(ctx).Delete(g.Map{
-			"id =": queryPid.Int(),
-		}); err != nil {
-			return nil, err
-		}
-		//del PubsubUserAcl
-		if result, err = dao.PubsubUserAcl.Ctx(ctx).Delete(g.Map{
-			"permission_id =": queryPid.Int(),
-		}); err != nil {
-			return nil, err
-		}
-
-	}
 	//save Permission
 	err = dao.PubsubPermission.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		// query
+		if queryPid, err = dao.PubsubPermission.Ctx(ctx).Fields("id").Where(g.Map{
+			"topic =":     in.Topic,
+			"publisher =": in.XDwebHostMMID,
+			"type =":      in.Type,
+		}).Value(); err != nil {
+			return err
+		}
+		// update.
+		if queryPid.Int() > 0 {
+			//del Permission
+			if result, err = dao.PubsubPermission.Ctx(ctx).Delete(g.Map{
+				"id =": queryPid.Int(),
+			}); err != nil {
+				return err
+			}
+			//del PubsubUserAcl
+			if result, err = dao.PubsubUserAcl.Ctx(ctx).Delete(g.Map{
+				"permission_id =": queryPid.Int(),
+			}); err != nil {
+				return err
+			}
+		}
+
 		if result, err = dao.PubsubPermission.Ctx(ctx).Data(do.PubsubPermission{
 			Topic:     in.Topic,
 			Type:      in.Type,
